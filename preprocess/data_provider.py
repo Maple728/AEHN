@@ -34,35 +34,18 @@ class DataProvider:
         :param provide_label:
         :return: feat (and label if provide_label): shape -> [n_items, ...]
         """
-        x = None
-        label = None
-        if provide_label:
-            return x, label
-        else:
-            return x
+        return [target_data['types'], target_data['dtimes']]
 
     def iterate_batch_data(self, provide_label=True):
         """ Get batch model input of one epoch.
         :param provide_label: return values with label if True
         :return:
         """
-        if provide_label:
-            window_size = self._T_skip * self._n + self._T + self._horizon
-        else:
-            window_size = self._T_skip * self._n + self._T
-
         # record_data of a partition whose shape is [n_records, ...]
         for feat_data, target_data in self._data_source.load_partition_data():
             # yield feat_data and target_data to batch data separately
+            datas = self._process_model_input(feat_data, target_data, False)
 
-            # process
-            n_items = len(target_data)
-            offset = window_size + self._batch_size - 1
-            idx = offset
-            while idx < n_items:
-                # shape -> [batch_size, window_size, D]
-                batch_target_data = window_rolling(target_data[idx - offset:idx], window_size)
+            yield yield2batch_data(datas, self._batch_size, keep_remainder=True)
 
-                yield self._process_model_input(batch_target_data, batch_target_data, provide_label)
-                idx = min(idx + self._batch_size, n_items) if idx < n_items else n_items + 1
 

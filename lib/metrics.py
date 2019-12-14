@@ -21,23 +21,36 @@ def mae_tf(preds, labels):
 
 
 # ---------------- metric functions for numpy -----------------------
-def rmse_np(preds, labels):
-    preds = np.reshape(preds, [-1])
-    labels = np.reshape(labels, [-1])
+def type_acc_np(preds, labels):
+    type_pred = preds['types']
+    type_label = labels['types']
 
-    rmse = np.sqrt(np.mean((preds - labels) ** 2))
+    return np.mean(type_pred == type_label)
+
+
+def time_rmse_np(preds, labels):
+    dt_pred = preds['dtimes']
+    dt_label = labels['dtimes']
+
+    dt_pred = np.reshape(dt_pred, [-1])
+    dt_label = np.reshape(dt_label, [-1])
+
+    rmse = np.sqrt(np.mean((dt_pred - dt_label) ** 2))
     return rmse
 
 
-def mae_np(preds, labels):
-    preds = np.reshape(preds, [-1])
-    labels = np.reshape(labels, [-1])
+def time_mae_np(preds, labels):
+    dt_pred = preds['dtimes']
+    dt_label = labels['dtimes']
 
-    mae = np.mean(np.abs(preds - labels))
+    dt_pred = np.reshape(dt_pred, [-1])
+    dt_label = np.reshape(dt_label, [-1])
+
+    mae = np.mean(np.abs(dt_pred - dt_label))
     return mae
 
 
-def mape_np(preds, labels, threshold=20):
+def mape_np(preds, labels, threshold):
     preds = np.reshape(preds, [-1])
     labels = np.reshape(labels, [-1])
 
@@ -48,22 +61,6 @@ def mape_np(preds, labels, threshold=20):
 
     mape = np.mean(np.abs(preds - labels) / labels)
     return mape
-
-
-def horizon_rmse_np(preds, labels):
-    rmses = []
-    horizon = preds.shape[1]
-    for i in range(horizon):
-        rmses.append(rmse_np(preds[:, i], labels[:, i]))
-    return rmses
-
-
-def horizon_mae_np(preds, labels):
-    maes = []
-    horizon = preds.shape[1]
-    for i in range(horizon):
-        maes.append(mae_np(preds[:, i], labels[:, i]))
-    return maes
 
 
 def MdAE_np(preds, labels):

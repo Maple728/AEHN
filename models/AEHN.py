@@ -94,7 +94,15 @@ class AEHN(BaseModel):
                                                   feed_dict=fd)
 
         # shape -> [batch_size, max_len - 1]
-        return loss, [pred_types[:, :-1], pred_time[:, :-1]], [batch_data[0][:, 1:], batch_data[1][:, 1:]]
+        preds = {
+            'types': pred_types[:, :-1],
+            'dtimes': pred_time[:, :-1]
+        }
+        labels = {
+            'types': batch_data[0][:, 1:],
+            'dtimes': batch_data[1][:, 1:]
+        }
+        return loss, preds, labels
 
     def predict(self, sess, batch_data, **kwargs):
         fd = {
@@ -105,7 +113,15 @@ class AEHN(BaseModel):
                                                feed_dict=fd)
 
         # shape -> [batch_size, max_len - 1]
-        return loss, [pred_types[:, :-1], pred_time[:, :-1]], [batch_data[0][:, 1:], batch_data[1][:, 1:]]
+        preds = {
+            'types': pred_types[:, :-1],
+            'dtimes': pred_time[:, :-1]
+        }
+        labels = {
+            'types': batch_data[0][:, 1:],
+            'dtimes': batch_data[1][:, 1:]
+        }
+        return loss, preds, labels
 
     def __init__(self, model_config):
         # get hyperparameters from config

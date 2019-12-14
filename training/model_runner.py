@@ -26,13 +26,15 @@ class ModelRunner(object):
     def __init__(self, config):
         self._config = config
         self._train_config = config['train']
+        self._model_config = config['model']
+        self._data_config = config['data']
 
         # the folders for model and tensor board
         self._model_folder = None
         self._tfb_folder = None
 
         # build model
-        self._model = BaseModel.generate_model_from_config(config['model'])
+        self._model = BaseModel.generate_model_from_config(self._model_config)
         self._model_saver = tf.train.Saver()
 
     @property
@@ -123,8 +125,9 @@ class ModelRunner(object):
             # initialize variables
             sess.run([tf.global_variables_initializer()])
 
+        print('Training starts on dataset', self._data_config['data_name'])
         print('----------Trainable parameter count:', get_num_trainable_params(), 'in model', self._model_folder)
-        print('Training start ...')
+
         best_valid_loss = float('inf')
         lr = lr_scheduler.get_lr()
         while lr > 0 and epoch_num <= max_epoch:
