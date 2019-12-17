@@ -11,7 +11,7 @@ import numpy as np
 from abc import abstractmethod
 
 
-class Scaler(object):
+class AbstractScaler(object):
     """
     Scaler for scaling data into proper range.
     """
@@ -33,35 +33,43 @@ class Scaler(object):
         pass
 
 
-class MultipleScaler(Scaler):
+class DictScaler(AbstractScaler):
 
     def __init__(self, **kwargs):
         self.scaler_dict = {}
         for k, scaler_class in kwargs.items():
             self.scaler_dict[k] = scaler_class()
 
-    def fit(self, **kwargs):
-        for k, records in kwargs.items():
-            self.scaler_dict[k].fit(records)
+    def fit_scaling(self, dict_data):
+        self.fit(dict_data)
+        return self.scaling(dict_data)
 
-    def fit_scaling(self, **kwargs):
-        self.fit(**kwargs)
-        return self.scaling(**kwargs)
+    def fit(self, dict_data):
+        for k, records in dict_data.items():
+            if k in self.scaler_dict.keys():
+                self.scaler_dict[k].fit(records)
 
-    def scaling(self, **kwargs):
-        ret = dict()
-        for k, records in kwargs.items():
-            ret[k] = self.scaler_dict[k].scaling(records)
-        return ret
+    def scaling(self, dict_data):
+        scaled_dict_data = dict()
+        for k, records in dict_data.items():
+            if k in self.scaler_dict.keys():
+                scaled_dict_data[k] = self.scaler_dict[k].scaling(records)
+            else:
+                scaled_dict_data[k] = records
+        return scaled_dict_data
 
-    def inverse_scaling(self, **kwargs):
-        ret = dict()
-        for k, scaled_records in kwargs.items():
-            ret[k] = self.scaler_dict[k].inverse_scaling(scaled_records)
-        return ret
+    def inverse_scaling(self, scaled_dict_data):
+        dict_data = dict()
+
+        for k, scaled_records in scaled_dict_data.items():
+            if k in self.scaler_dict.keys():
+                dict_data[k] = self.scaler_dict[k].inverse_scaling(scaled_records)
+            else:
+                dict_data[k] = scaled_records
+        return dict_data
 
 
-class StandZeroMaxScaler(Scaler):
+class StandZeroMaxScaler(AbstractScaler):
     def __init__(self, epsilon=1e-8):
         self._max_val = None
         self._epsilon = epsilon
@@ -86,7 +94,7 @@ class StandZeroMaxScaler(Scaler):
         return scaled_records * (self._max_val + self._epsilon)
 
 
-class MinMaxScaler(Scaler):
+class MinMaxScaler(AbstractScaler):
     def __init__(self, epsilon=1e-8):
         self._min_val = None
         self._max_val = None
@@ -103,37 +111,37 @@ class MinMaxScaler(Scaler):
         return self.scaling(records)
 
     def scaling(self, records):
-        if self._min_val is None:
+        if self._max_val is None:
             raise RuntimeError('Try to scaling records using a uninitialized scaler!')
         return (records - self._min_val) / (self._max_val - self._min_val + self._epsilon)
 
     def inverse_scaling(self, scaled_records):
-        if self._min_val is None:
+        if self._max_val is None:
             raise RuntimeError('Try to inverse_scaling records using a uninitialized scaler!')
         return (scaled_records * (self._max_val - self._min_val + self._epsilon)) + self._min_val
 
 
-class ZeroMaxScaler(Scaler):
+class ZeroMaxScaler(AbstractScaler):
     def __init__(self, epsilon=1e-8):
         self._min_val = 0.0
         self._max_val = None
         self._epsilon = epsilon
 
     def fit(self, records):
-        if self._min_val is not None:
+        if self._max_val is not None:
             raise RuntimeError('Try to fit a fitted scaler!')
-        self._max_val = np.max(records, axis=0)
+        self._max_val = np.max(records, axis=1, keepdims=True)
 
     def fit_scaling(self, records):
         self.fit(records)
         return self.scaling(records)
 
     def scaling(self, records):
-        if self._min_val is None:
+        if self._max_val is None:
             raise RuntimeError('Try to scaling records using a uninitialized scaler!')
         return (records - self._min_val) / (self._max_val - self._min_val + self._epsilon)
 
     def inverse_scaling(self, scaled_records):
-        if self._min_val is None:
+        if self._max_val is None:
             raise RuntimeError('Try to inverse_scaling records using a uninitialized scaler!')
         return (scaled_records * (self._max_val - self._min_val + self._epsilon)) + self._min_val

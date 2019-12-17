@@ -14,7 +14,7 @@ import numpy as np
 import tensorflow as tf
 import yaml
 
-from lib.utils import get_num_trainable_params, make_config_string, create_folder
+from lib.utils import get_num_trainable_params, make_config_string, create_folder, concat_arrs_of_dict
 from training.lr_scheduler import LRScheduler
 from models import *
 
@@ -88,7 +88,7 @@ class ModelRunner(object):
         loss_list = []
         pred_list = []
         real_list = []
-        for batch_data in data_provider.iterate_batch_data(True):
+        for batch_data in data_provider.iterate_batch_data():
             loss, pred, real = run_func(sess, batch_data, lr=lr)
 
             loss_list.append(loss)
@@ -96,13 +96,13 @@ class ModelRunner(object):
             real_list.append(real)
 
         # shape -> [n_items, horizon, D]
-        epoch_preds = np.concatenate(pred_list, axis=0)
-        epoch_reals = np.concatenate(real_list, axis=0)
+        epoch_preds = concat_arrs_of_dict(pred_list)
+        epoch_reals = concat_arrs_of_dict(real_list)
 
         epoch_avg_loss = np.mean(loss_list)
         # inverse scaling data
-        epoch_preds = data_provider.data_source.scaler.inverse_scaling(epoch_preds)
-        epoch_reals = data_provider.data_source.scaler.inverse_scaling(epoch_reals)
+        epoch_preds = data_provider.epoch_inverse_scaling(epoch_preds)
+        epoch_reals = data_provider.epoch_inverse_scaling(epoch_reals)
 
         return epoch_avg_loss, epoch_preds, epoch_reals
 
@@ -131,11 +131,12 @@ class ModelRunner(object):
         best_valid_loss = float('inf')
         lr = lr_scheduler.get_lr()
         while lr > 0 and epoch_num <= max_epoch:
-            print('epoch:', epoch_num, 'lr:', lr)
-            # train
-            self._run_epoch(sess, train_data_provider,
-                            lr, is_train=True)
 
+            # train
+            loss, _, _ = self._run_epoch(sess, train_data_provider,
+                                         lr, is_train=True)
+
+            print('Epoch:', epoch_num, 'Train Loss:', loss)
             # valid
             loss, _, _ = self._run_epoch(sess, valid_data_provider,
                                          lr, is_train=False)
@@ -155,9 +156,9 @@ class ModelRunner(object):
             # test
             loss, preds, labels = self._run_epoch(sess, test_data_provider,
                                                   lr, is_train=False)
-            metrics = test_data_provider.data_source.get_metrics(preds, labels)
+            metrics = test_data_provider.get_metrics(preds, labels)
             str_metrics = str(metrics)
-            print('Epoch', epoch_num, 'Test Loss:', loss, str_metrics)
+            print('\tTest Loss:', loss, str_metrics)
 
             epoch_num += 1
         print('Training Finished!')
@@ -166,7 +167,7 @@ class ModelRunner(object):
         self.restore_model(sess)
         loss, preds, labels = self._run_epoch(sess, data_provider,
                                               lr=0, is_train=False)
-        metrics = data_provider.data_source.get_metrics(preds, labels)
+        metrics = data_provider.get_metrics(preds, labels)
         return preds, labels, metrics
 
     def restore_model(self, sess):

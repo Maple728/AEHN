@@ -21,27 +21,29 @@ def mae_tf(preds, labels):
 
 
 # ---------------- metric functions for numpy -----------------------
-def type_acc_np(preds, labels):
-    type_pred = preds['types']
-    type_label = labels['types']
+def type_acc_np(preds, labels, **kwargs):
+    seq_mask = kwargs['seq_mask']
+
+    type_pred = preds['types'][seq_mask]
+    type_label = labels['types'][seq_mask]
+
 
     return np.mean(type_pred == type_label)
 
 
-def time_rmse_np(preds, labels):
-    dt_pred = preds['dtimes']
-    dt_label = labels['dtimes']
-
-    dt_pred = np.reshape(dt_pred, [-1])
-    dt_label = np.reshape(dt_label, [-1])
+def time_rmse_np(preds, labels, **kwargs):
+    seq_mask = kwargs['seq_mask']
+    dt_pred = preds['dtimes'][seq_mask]
+    dt_label = labels['dtimes'][seq_mask]
 
     rmse = np.sqrt(np.mean((dt_pred - dt_label) ** 2))
     return rmse
 
 
-def time_mae_np(preds, labels):
-    dt_pred = preds['dtimes']
-    dt_label = labels['dtimes']
+def time_mae_np(preds, labels, **kwargs):
+    seq_mask = kwargs['seq_mask']
+    dt_pred = preds['dtimes'][seq_mask]
+    dt_label = labels['dtimes'][seq_mask]
 
     dt_pred = np.reshape(dt_pred, [-1])
     dt_label = np.reshape(dt_label, [-1])
@@ -50,9 +52,17 @@ def time_mae_np(preds, labels):
     return mae
 
 
-def mape_np(preds, labels, threshold):
+def mape_np(preds, labels, **kwargs):
+    """
+
+    :param preds:
+    :param labels:
+    :param kwargs: need (threshold)
+    :return:
+    """
     preds = np.reshape(preds, [-1])
     labels = np.reshape(labels, [-1])
+    threshold = kwargs['threshold']
 
     # zero mask
     mask = labels > threshold
@@ -61,30 +71,3 @@ def mape_np(preds, labels, threshold):
 
     mape = np.mean(np.abs(preds - labels) / labels)
     return mape
-
-
-def MdAE_np(preds, labels):
-    """
-    Median Absolute Error
-    :param preds:
-    :param labels:
-    :return:
-    """
-    preds = np.reshape(preds, [-1])
-    labels = np.reshape(labels, [-1])
-    return np.median(np.abs(preds - labels))
-
-
-def mase_np(preds, labels, benchmark_mae):
-    """
-    Mean Absolute Scaled Error
-    :param preds:
-    :param labels:
-    :param benchmark_mae:
-    :return:
-    """
-    preds = np.reshape(preds, [-1])
-    labels = np.reshape(labels, [-1])
-
-    mase = np.mean(np.abs(preds - labels) / benchmark_mae)
-    return mase

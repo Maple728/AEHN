@@ -84,10 +84,12 @@ class AEHN(BaseModel):
     """
 
     def train(self, sess, batch_data, **kwargs):
+        type_seqs = batch_data['types']
+        dtime_seqs = batch_data['dtimes']
         lr = kwargs.get('lr')
         fd = {
-            self.types_seq: batch_data[0],
-            self.dtimes_seq: batch_data[1],
+            self.types_seq: type_seqs,
+            self.dtimes_seq: dtime_seqs,
             self.learning_rate: lr
         }
         _, loss, pred_types, pred_time = sess.run([self.train_op, self.loss, self.pred_types, self.pred_time],
@@ -99,15 +101,17 @@ class AEHN(BaseModel):
             'dtimes': pred_time[:, :-1]
         }
         labels = {
-            'types': batch_data[0][:, 1:],
-            'dtimes': batch_data[1][:, 1:]
+            'types': type_seqs[:, 1:],
+            'dtimes': dtime_seqs[:, 1:]
         }
         return loss, preds, labels
 
     def predict(self, sess, batch_data, **kwargs):
+        type_seqs = batch_data['types']
+        dtime_seqs = batch_data['dtimes']
         fd = {
-            self.types_seq: batch_data[0],
-            self.dtimes_seq: batch_data[1]
+            self.types_seq: type_seqs,
+            self.dtimes_seq: dtime_seqs
         }
         loss, pred_types, pred_time = sess.run([self.loss, self.pred_types, self.pred_time],
                                                feed_dict=fd)
@@ -118,8 +122,8 @@ class AEHN(BaseModel):
             'dtimes': pred_time[:, :-1]
         }
         labels = {
-            'types': batch_data[0][:, 1:],
-            'dtimes': batch_data[1][:, 1:]
+            'types': type_seqs[:, 1:],
+            'dtimes': dtime_seqs[:, 1:]
         }
         return loss, preds, labels
 
@@ -199,8 +203,8 @@ class AEHN(BaseModel):
 
             # compute delta
             # shape -> [batch_size, max_len, max_len, hidden_dim]
-            left = tf.tile(x_input[:, :, None, :], [1, 1, max_len, 1])
-            right = tf.tile(x_input[:, None, :, :], [1, 1, 1, max_len])
+            left = tf.tile(x_input[:, None, :, :], [1, max_len, 1, 1])
+            right = tf.tile(x_input[:, :, None, :], [1, 1, max_len, 1])
             # shape -> [batch_size, max_len, max_len, hidden_dim * 2]
             cur_prev_concat = tf.concat([left, right], axis=-1)
             # shape -> [batch_size, max_len, max_len, hidden_dim]
@@ -264,4 +268,4 @@ class AEHN(BaseModel):
 
             time_loss = tf.reduce_mean(tf.abs(time_diff))
 
-            return type_loss + time_loss
+            return type_loss

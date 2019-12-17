@@ -42,6 +42,23 @@ def get_metric_functions(metric_name_list):
     return metric_functions
 
 
+def get_metrics_callback_from_names(metric_names):
+    metric_functions = get_metric_functions(metric_names)
+
+    def metrics(preds, labels, **kwargs):
+        """
+        :param preds:
+        :param labels:
+        :return:
+        """
+        res = dict()
+        for metric_name, metric_func in zip(metric_names, metric_functions):
+            res[metric_name] = metric_func(preds, labels, **kwargs)
+        return res
+
+    return metrics
+
+
 def get_num_trainable_params():
     """ Get the number of trainable parameters in current session (model).
     :return:
@@ -95,23 +112,26 @@ def window_rolling(origin_data, window_size):
     return rolling_data
 
 
-def yield2batch_data(arrs, batch_size, keep_remainder=True):
-    """Iterate the array of arrs over 0-dim to get batch data.
-    :param arrs: a list of [n_items, ...]
+def yield2batch_data(arr_dict, batch_size, keep_remainder=True):
+    """Iterate the dictionary of array over 0-dim to get batch data.
+    :param arr_dict: a dictionary containing array whose shape is [n_items, ...]
     :param batch_size:
     :param keep_remainder: Discard the remainder if False, otherwise keep it.
     :return:
     """
-    if arrs is None or len(arrs) == 0:
+    if arr_dict is None or len(arr_dict) == 0:
         return
 
+    keys = list(arr_dict.keys())
+
     idx = 0
-    n_items = len(arrs[0])
+    n_items = len(arr_dict[keys[0]])
     while idx < n_items:
         if idx + batch_size > n_items and keep_remainder is False:
             return
         next_idx = min(idx + batch_size, n_items)
-        yield [arr[idx: next_idx] for arr in arrs]
+
+        yield {k: arr_dict[k][idx: next_idx] for k in keys}
 
         # update idx
         idx = next_idx
@@ -126,3 +146,16 @@ def create_folder(*args):
     if not os.path.exists(path):
         os.makedirs(path)
     return path
+
+
+def concat_arrs_of_dict(dict_list):
+    res = dict()
+
+    keys = dict_list[0].keys()
+    for k in keys:
+        arr_list = []
+        for d in dict_list:
+            arr_list.append(d[k])
+        res[k] = np.concatenate(arr_list, axis=0)
+
+    return res

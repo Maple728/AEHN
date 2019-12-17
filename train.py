@@ -20,16 +20,15 @@ def main(args):
     with open(config_filename) as config_file:
         config = yaml.load(config_file)
         data_config = config['data']
-        model_config = config['model']
 
         # load data
         # get data source
-        data_loader = DataLoader(**data_config, **model_config)
+        data_loader = DataLoader(data_config)
         train_ds, valid_ds, test_ds = data_loader.get_three_datasource()
         # get three data provider for model input
-        train_dp = DataProvider(train_ds, **data_config, **model_config)
-        valid_dp = DataProvider(valid_ds, **data_config, **model_config)
-        test_dp = DataProvider(test_ds, **data_config, **model_config)
+        train_dp = DataProvider(train_ds, data_config)
+        valid_dp = DataProvider(valid_ds, data_config)
+        test_dp = DataProvider(test_ds, data_config)
 
         with tf.Session() as sess:
             model_runner = ModelRunner(config)
@@ -40,7 +39,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config_filename', type=str, required=True,
+    parser.add_argument('--config_filename', default='configs/so.yaml', type=str, required=False,
                         help='Configuration filename for training or restoring the model.')
     args = parser.parse_args()
     main(args)

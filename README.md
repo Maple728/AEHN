@@ -5,13 +5,15 @@ This is a TensorFlow1.0 implementation of APTN.
 ## Requirements
 - python>=3.5
 - tensorflow>=1.12.0
-- numpy
-
 
 Dependency can be installed using the following command:
 ```bash
 pip install -r requirements.txt
 ```
+
+## Datasets
+All datasets can be downloaded from [BaiduDisk](https://pan.baidu.com/s/1H6mfLB1MErHuh6gDrs88sw).
+
 
 ## Model Training
 ```bash
