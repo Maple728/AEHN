@@ -44,30 +44,42 @@ class Attention:
             score = tf.squeeze(score, axis=-1)
 
             ones_mat = tf.ones_like(score)
+            zeros_mat = tf.zeros_like(score)
             masked_val_mat = ones_mat * MASKED_VAL
 
             # (batch_size, num_queries, num_keys)
-            masks = tf.linalg.LinearOperatorLowerTriangular(ones_mat).to_dense()
+            lower_diag_masks = tf.linalg.LinearOperatorLowerTriangular(ones_mat).to_dense()
 
             if pos_mask == 'self-right':
                 # (batch_size, num_queries, num_keys)
-                score = tf.where(tf.equal(masks, 0),
+                score = tf.where(tf.equal(lower_diag_masks, 0),
                                  masked_val_mat,
                                  score)
+                attention_weight = tf.nn.softmax(score, axis=-1)
+                attention_weight = tf.where(tf.equal(lower_diag_masks, 0),
+                                            zeros_mat,
+                                            attention_weight)
             elif pos_mask == 'right':
                 # transpose to upper triangle
-                pos_mask = tf.transpose(masks, perm=[0, 2, 1])
-                score = tf.where(tf.equal(pos_mask, 0),
-                                 score,
-                                 masked_val_mat)
+                lower_masks = tf.transpose(lower_diag_masks, perm=[0, 2, 1])
+
+                score = tf.where(tf.equal(lower_masks, 1),
+                                 masked_val_mat,
+                                 score)
+                attention_weight = tf.nn.softmax(score, axis=-1)
+                attention_weight = tf.where(tf.equal(lower_masks, 1),
+                                            zeros_mat,
+                                            attention_weight)
+
             else:
                 raise RuntimeError('Unknown pas_mask: {}'.format(pos_mask))
 
             # (batch_size, num_queries, num_keys, 1)
-            score = tf.expand_dims(score, axis=-1)
+            attention_weight = tf.expand_dims(attention_weight, axis=-1)
+        else:
 
-        # (batch_size, num_queries, num_keys, 1)
-        attention_weight = tf.nn.softmax(score, axis=-2)
+            # (batch_size, num_queries, num_keys, 1)
+            attention_weight = tf.nn.softmax(score, axis=-2)
 
         # (batch_size, num_queries, num_keys, cell_units)
         context_vector = attention_weight * k
@@ -92,6 +104,7 @@ class AEHN(BaseModel):
             self.dtimes_seq: dtime_seqs,
             self.learning_rate: lr
         }
+
         _, loss, pred_types, pred_time = sess.run([self.train_op, self.loss, self.pred_types, self.pred_time],
                                                   feed_dict=fd)
 
@@ -194,7 +207,7 @@ class AEHN(BaseModel):
             mus = mu_layer(x_input)
 
             # compute alpha
-            # (batch_size, max_len, max_len, 1)
+            # (batch_size, max_len, max_len, 1) (LowerTriangular without diag)
             _, all_attention_weights = attention_layer.compute_attention_weight(x_input,
                                                                                 x_input,
                                                                                 pos_mask='right')
@@ -216,6 +229,11 @@ class AEHN(BaseModel):
             cum_dtimes = tf.cumsum(self.dtimes_seq, axis=1, reverse=True, exclusive=True)
             # shape -> [batch_size, max_len, max_len, 1] (positive)
             elapses = tf.expand_dims(cum_dtimes[:, None, :] - cum_dtimes[:, :, None], axis=-1)
+
+            # mask elapses to avoid nan calculated by exp after (nan * 0 = nan)
+            elapses = tf.where(tf.equal(all_attention_weights, 0),
+                               all_attention_weights,
+                               elapses)
 
             # compute lambda (mu + sum<alpha * exp(-delta * elapse)>)
             # shape -> [batch_size, max_len, hidden_dim]
@@ -248,13 +266,11 @@ class AEHN(BaseModel):
             seq_mask = tf.reduce_sum(self.types_seq_one_hot[:, 1:], axis=-1) > 0
 
             # (batch_size, max_len - 1, process_dim)
-            pred_type_logits = pred_type_logits[:, :-1]
-
-            pred_type_logits = pred_type_logits - tf.reduce_max(pred_type_logits, axis=-1, keepdims=True)
-
             type_label = self.types_seq_one_hot[:, 1:]
 
-            pred_type_proba = tf.nn.softmax(pred_type_logits, axis=-1) + 1e-31
+            pred_type_logits = pred_type_logits[:, :-1]
+            pred_type_logits = pred_type_logits - tf.reduce_max(pred_type_logits, axis=-1, keepdims=True)
+            pred_type_proba = tf.nn.softmax(pred_type_logits, axis=-1) + 1e-8
 
             # (batch_size, max_len - 1)
             cross_entropy = tf.reduce_sum(- tf.log(pred_type_proba) * type_label, axis=-1)
@@ -268,4 +284,4 @@ class AEHN(BaseModel):
 
             time_loss = tf.reduce_mean(tf.abs(time_diff))
 
-            return type_loss
+            return type_loss + time_loss

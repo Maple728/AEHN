@@ -64,7 +64,6 @@ class DataProvider(AbstractDataProvider):
     def iterate_batch_data(self):
         if self._is_first_iterate:
             scale_func = self._scaler.fit_scaling
-            self._is_first_iterate = False
         else:
             scale_func = self._scaler.scaling
 
@@ -79,6 +78,9 @@ class DataProvider(AbstractDataProvider):
             # yield records to batch data separately
             for batch_data in yield2batch_data(scaled_inputs, self._batch_size, keep_remainder=True):
                 yield batch_data
+
+        if self._is_first_iterate:
+            self._is_first_iterate = False
 
     def _process_model_input(self, records):
         """ Process each item as model input.

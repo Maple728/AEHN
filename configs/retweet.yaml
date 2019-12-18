@@ -1,0 +1,23 @@
+base_dir: logs
+data:
+  batch_size: 64
+  data_name: retweet
+  data_filename: data/data_retweet/{}.pkl
+  process_dim: 3
+  use_cache: False
+  cache_dir: cache
+  metrics: [type_acc, time_rmse]
+
+model:
+  name: AEHN
+  process_dim: 3
+  hidden_dim: 32
+  loss_function: mse
+
+train:
+  dropout_rate: 0.0
+  lr: 0.001
+  epoch: 0
+  max_epoch: 500
+  lr_scheduler: PlateauLRScheduler
+  patience: 15

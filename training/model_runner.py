@@ -158,7 +158,7 @@ class ModelRunner(object):
                                                   lr, is_train=False)
             metrics = test_data_provider.get_metrics(preds, labels)
             str_metrics = str(metrics)
-            print('\tTest Loss:', loss, str_metrics)
+            print('---Test Loss:', loss, str_metrics)
 
             epoch_num += 1
         print('Training Finished!')
