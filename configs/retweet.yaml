@@ -1,6 +1,6 @@
 base_dir: logs
 data:
-  batch_size: 64
+  batch_size: 32
   data_name: retweet
   data_filename: data/data_retweet/{}.pkl
   process_dim: 3

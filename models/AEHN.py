@@ -9,85 +9,7 @@
 import tensorflow as tf
 from tensorflow.keras import layers
 
-from models.base_model import BaseModel
-
-
-class Attention:
-    def __init__(self, cell_units, reuse=tf.AUTO_REUSE):
-        self.cell_units = cell_units
-        with tf.variable_scope('attention_layer', reuse=reuse):
-            self.attention_w1 = layers.Dense(self.cell_units, name='w1')
-            self.attention_w2 = layers.Dense(self.cell_units, name='w2')
-            self.attention_v = layers.Dense(1, name='v')
-
-    def compute_attention_weight(self, decoder_state, encoder_output, pos_mask=None):
-        """
-        :param decoder_state: (batch_size, num_queries, cell_units)
-        :param encoder_output: (batch_size, num_keys, cell_units)
-        :param pos_mask: ['self-right', 'right', None]
-        :return: (batch_size, num_queries, cell_units), (batch_size, num_queries, num_keys, 1)
-        """
-        MASKED_VAL = - 2 ** 32 + 1
-        # (batch_size, num_queries, 1, cell_units)
-        q = decoder_state[:, :, None, :]
-        # (batch_size, 1, num_keys, cell_units)
-        k = encoder_output[:, None, :, :]
-
-        # (batch_size, num_queries, num_keys, cell_units)
-        weighted_state = self.attention_w1(q) + self.attention_w2(k)
-
-        # (batch_size, num_queries, num_keys, 1)
-        score = self.attention_v(tf.nn.tanh(weighted_state)) / tf.sqrt(tf.cast(self.cell_units, dtype=tf.float32))
-
-        if pos_mask:
-            # (batch_size, num_queries, num_keys)
-            score = tf.squeeze(score, axis=-1)
-
-            ones_mat = tf.ones_like(score)
-            zeros_mat = tf.zeros_like(score)
-            masked_val_mat = ones_mat * MASKED_VAL
-
-            # (batch_size, num_queries, num_keys)
-            lower_diag_masks = tf.linalg.LinearOperatorLowerTriangular(ones_mat).to_dense()
-
-            if pos_mask == 'self-right':
-                # (batch_size, num_queries, num_keys)
-                score = tf.where(tf.equal(lower_diag_masks, 0),
-                                 masked_val_mat,
-                                 score)
-                attention_weight = tf.nn.softmax(score, axis=-1)
-                attention_weight = tf.where(tf.equal(lower_diag_masks, 0),
-                                            zeros_mat,
-                                            attention_weight)
-            elif pos_mask == 'right':
-                # transpose to upper triangle
-                lower_masks = tf.transpose(lower_diag_masks, perm=[0, 2, 1])
-
-                score = tf.where(tf.equal(lower_masks, 1),
-                                 masked_val_mat,
-                                 score)
-                attention_weight = tf.nn.softmax(score, axis=-1)
-                attention_weight = tf.where(tf.equal(lower_masks, 1),
-                                            zeros_mat,
-                                            attention_weight)
-
-            else:
-                raise RuntimeError('Unknown pas_mask: {}'.format(pos_mask))
-
-            # (batch_size, num_queries, num_keys, 1)
-            attention_weight = tf.expand_dims(attention_weight, axis=-1)
-        else:
-
-            # (batch_size, num_queries, num_keys, 1)
-            attention_weight = tf.nn.softmax(score, axis=-2)
-
-        # (batch_size, num_queries, num_keys, cell_units)
-        context_vector = attention_weight * k
-
-        # (batch_size, num_queries, cell_units)
-        context_vector = tf.reduce_sum(context_vector, axis=-2)
-
-        return context_vector, attention_weight
+from models.base_model import BaseModel, Attention
 
 
 class AEHN(BaseModel):
@@ -142,37 +64,23 @@ class AEHN(BaseModel):
 
     def __init__(self, model_config):
         # get hyperparameters from config
-        self.process_dim = model_config['process_dim']
-        self.hidden_dim = model_config['hidden_dim']
-        self.num_integral_sample = model_config.get('num_integral_sample', 100)
-        self.max_time_integral = model_config.get('max_time_integral', 2.0)
+        super(AEHN, self).__init__(model_config)
 
         with tf.variable_scope('AEHN'):
-            # --------------- placeholders -----------------
-            # train placeholder
-            self.learning_rate = tf.placeholder(tf.float32)
-            # input placeholder
-            # shape -> [batch_size, max_len]
-            self.types_seq = tf.placeholder(tf.int32, shape=[None, None])
-            self.dtimes_seq = tf.placeholder(tf.float32, shape=[None, None])
-
-            # --------------- build model -----------------
-            # shape -> [batch_size, max_len, process_dim]
-            self.types_seq_one_hot = tf.one_hot(self.types_seq, self.process_dim)
             # 1. Embedding of input
             # shape -> [batch_size, max_len, hidden_dim]
             type_seq_emb = self.embedding_layer(self.types_seq)
 
             # 2. Intensity layer
-            # shape -> [batch_size, max_len, hidden_size]
-            lambdas = self.intensity_layer(type_seq_emb)
+            # shape -> [batch_size, max_len, hidden_dim]
+            imply_lambdas = self.intensity_layer(type_seq_emb)
 
             # 3. Inference layer
             # [batch_size, max_len, process_dim], [batch_size, max_len]
-            pred_type_logits, pred_time = self.inference_layer(lambdas)
+            pred_type_logits, pred_time = self.hybrid_inference(imply_lambdas)
 
             # 4. train step
-            self.loss = self.compute_all_loss(pred_type_logits, pred_time)
+            self.loss = self.compute_all_loss(pred_type_logits, pred_time, self.seq_mask)
             self.opt = tf.train.AdamOptimizer(self.learning_rate)
             self.train_op = self.opt.minimize(self.loss)
 
@@ -190,14 +98,14 @@ class AEHN(BaseModel):
         return emb
 
     def intensity_layer(self, x_input, reuse=tf.AUTO_REUSE):
-        """
+        """ Compute the imply lambdas.
         :param x_input: [batch_size, max_len, hidden_dim]
         :param reuse:
         :return: [batch_size, max_len, hidden_dim]
         """
         with tf.variable_scope('intensity_layer', reuse=reuse):
-            delta_layer = layers.Dense(self.hidden_dim, activation=tf.nn.softplus, name='delta_layer')
             attention_layer = Attention(self.hidden_dim)
+            delta_layer = layers.Dense(self.hidden_dim, activation=tf.nn.softplus, name='delta_layer')
             mu_layer = layers.Dense(self.hidden_dim, activation=tf.nn.softplus, name='mu_layer')
 
         with tf.name_scope('intensity_layer'):
@@ -241,9 +149,9 @@ class AEHN(BaseModel):
             # shape -> [batch_size, max_len, hidden_dim]
             right_term = tf.reduce_sum(alphas * tf.exp(-deltas * elapses), axis=-2)
             # shape -> [batch_size, max_len, hidden_dim]
-            lambdas = left_term + right_term
+            imply_lambdas = left_term + right_term
 
-            return lambdas
+            return imply_lambdas
 
     def inference_layer(self, lambdas):
         """
@@ -260,11 +168,9 @@ class AEHN(BaseModel):
 
         return pred_type_logits, pred_time
 
-    def compute_all_loss(self, pred_type_logits, pred_times):
+    def compute_all_loss(self, pred_type_logits, pred_times, seq_mask):
         with tf.variable_scope('loss'):
-            # EOS padding type is all zeros in the last dim of the tensor
-            seq_mask = tf.reduce_sum(self.types_seq_one_hot[:, 1:], axis=-1) > 0
-
+            seq_mask = seq_mask[:, 1:]
             # (batch_size, max_len - 1, process_dim)
             type_label = self.types_seq_one_hot[:, 1:]
 

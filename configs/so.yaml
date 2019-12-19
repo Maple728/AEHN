@@ -1,11 +1,12 @@
 base_dir: logs
 data:
-  batch_size: 64
+  batch_size: 32
   data_name: so
   data_filename: data/data_so/{}.pkl
   process_dim: 22
   use_cache: False
   cache_dir: cache
+  # list of the names of the metrics.
   metrics: [type_acc, time_rmse]
 
 model:

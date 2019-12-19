@@ -13,16 +13,6 @@ from operator import mul
 from lib.metrics import *
 
 
-def tensordot(tensor_a, tensor_b):
-    """ Tensor dot function. The last dimension of tensor_a and the first dimension of tensor_b must be the same.
-    :param tensor_a:
-    :param tensor_b:
-    :return: the result of tensor_a tensor dot tensor_b.
-    """
-    last_idx_a = len(tensor_a.get_shape().as_list()) - 1
-    return tf.tensordot(tensor_a, tensor_b, [[last_idx_a], [0]])
-
-
 def get_tf_loss_function(loss_name):
     """ Get tensorflow loss function by loss_name
     :param loss_name:

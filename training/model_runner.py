@@ -35,7 +35,7 @@ class ModelRunner(object):
 
         # build model
         self._model = BaseModel.generate_model_from_config(self._model_config)
-        self._model_saver = tf.train.Saver()
+        self._model_saver = tf.train.Saver(max_to_keep=0)
 
     @property
     def model(self):
@@ -57,7 +57,7 @@ class ModelRunner(object):
         # create model and tensorflow board folder
         time = datetime.datetime.now()
         timestamp = datetime.datetime.strftime(time, '%m%d%H%M%S')
-        model_foldername = make_config_string(self._config['model']) + '-' + timestamp
+        model_foldername = make_config_string(self._config['model']) + '_' + timestamp
 
         self._model_folder = create_folder(self._config['base_dir'], model_foldername, 'models')
         self._tfb_folder = create_folder(self._config['base_dir'], model_foldername, 'tfbs')
@@ -136,7 +136,7 @@ class ModelRunner(object):
             loss, _, _ = self._run_epoch(sess, train_data_provider,
                                          lr, is_train=True)
 
-            print('Epoch:', epoch_num, 'Train Loss:', loss)
+            print(f'Epoch {epoch_num}: train loss - {loss}, learning rate - {lr}')
             # valid
             loss, _, _ = self._run_epoch(sess, valid_data_provider,
                                          lr, is_train=False)
@@ -153,12 +153,12 @@ class ModelRunner(object):
                 # save best model
                 self._save_model_with_config(sess)
 
-            # test
-            loss, preds, labels = self._run_epoch(sess, test_data_provider,
-                                                  lr, is_train=False)
-            metrics = test_data_provider.get_metrics(preds, labels)
-            str_metrics = str(metrics)
-            print('---Test Loss:', loss, str_metrics)
+                # test
+                loss, preds, labels = self._run_epoch(sess, test_data_provider,
+                                                      lr, is_train=False)
+                metrics = test_data_provider.get_metrics(preds, labels)
+                str_metrics = str(metrics)
+                print('---Test Loss:', loss, str_metrics)
 
             epoch_num += 1
         print('Training Finished!')

@@ -39,7 +39,9 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config_filename', default='configs/so.yaml', type=str, required=False,
+    config_name = 'configs/so.yaml'
+    # config_name = 'logs/name-AEHN_proc-22_hidd-32_loss-mse-1219021926/models/config-26.yaml'
+    parser.add_argument('--config_filename', default=config_name, type=str, required=False,
                         help='Configuration filename for training or restoring the model.')
     args = parser.parse_args()
     main(args)
