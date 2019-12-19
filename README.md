@@ -37,5 +37,5 @@ python eval.py --config_filename={saved_model_config_filename}
 
 | Model | Dataset | type_acc | time_rmse |
 | :----:| :-----: | :------: | :-------: |
-| AEHN_simple |   so  | 45.83%   |   0.64    |
+| AEHN_simple |   so  | 45.85%   |   0.64    |
 | AEHN_simple |retweet|  59.91% | 274.64 |

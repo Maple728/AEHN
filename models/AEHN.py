@@ -10,6 +10,7 @@ import tensorflow as tf
 from tensorflow.keras import layers
 
 from models.base_model import BaseModel, Attention
+from lib.utils import tensordot
 
 
 class AEHN(BaseModel):
@@ -72,15 +73,21 @@ class AEHN(BaseModel):
             type_seq_emb = self.embedding_layer(self.types_seq)
 
             # 2. Intensity layer
-            # shape -> [batch_size, max_len, hidden_dim]
-            imply_lambdas = self.intensity_layer(type_seq_emb)
+            # shape -> [batch_size, max_len, process_dim]
+            lambdas, \
+            lambdas_loss_samples, dtimes_loss_samples, \
+            lambdas_pred_samples, dtimes_pred_samples = self.intensity_layer(type_seq_emb)
 
-            # 3. Inference layer
+            # 3. Inference layer and loss function
             # [batch_size, max_len, process_dim], [batch_size, max_len]
-            pred_type_logits, pred_time = self.hybrid_inference(imply_lambdas)
+            if self.loss_function == 'loglikelihood':
+                pred_type_logits, pred_time = self.loglikelihood_inference(lambdas_pred_samples, dtimes_pred_samples)
+                self.loss = self.shuffle_loglikelihood_loss(lambdas, lambdas_loss_samples, dtimes_loss_samples)
+            else:
+                pred_type_logits, pred_time = self.hybrid_inference(lambdas)
+                self.loss = self.shuffle_hybrid_loss(pred_type_logits, pred_time)
 
             # 4. train step
-            self.loss = self.compute_all_loss(pred_type_logits, pred_time, self.seq_mask)
             self.opt = tf.train.AdamOptimizer(self.learning_rate)
             self.train_op = self.opt.minimize(self.loss)
 
@@ -109,16 +116,17 @@ class AEHN(BaseModel):
             mu_layer = layers.Dense(self.hidden_dim, activation=tf.nn.softplus, name='mu_layer')
 
         with tf.name_scope('intensity_layer'):
-            max_len = tf.shape(x_input)[1]
+            batch_size, max_len = tf.shape(x_input)[:2]
+
             # compute mu
             # shape -> [batch_size, max_len, hidden_dim]
             mus = mu_layer(x_input)
 
             # compute alpha
-            # (batch_size, max_len, max_len, 1) (LowerTriangular without diag)
+            # (batch_size, max_len, max_len, 1) (LowerTriangular)
             _, all_attention_weights = attention_layer.compute_attention_weight(x_input,
                                                                                 x_input,
-                                                                                pos_mask='right')
+                                                                                pos_mask='self-right')
             # shape -> [batch_size, max_len, max_len, 1]
             alphas = all_attention_weights
 
@@ -135,59 +143,115 @@ class AEHN(BaseModel):
             # shape -> [batch_size, max_len]
             # [dt_0, dt_1, dt_2] => [dt_1 + dt_2, dt_2, 0]
             cum_dtimes = tf.cumsum(self.dtimes_seq, axis=1, reverse=True, exclusive=True)
-            # shape -> [batch_size, max_len, max_len, 1] (positive)
-            elapses = tf.expand_dims(cum_dtimes[:, None, :] - cum_dtimes[:, :, None], axis=-1)
 
-            # mask elapses to avoid nan calculated by exp after (nan * 0 = nan)
-            elapses = tf.where(tf.equal(all_attention_weights, 0),
-                               all_attention_weights,
-                               elapses)
+            # (dt_1, dt_2, ..., dt_0) (the last one is not used).
+            # [batch_size, max_len]
+            target_dtimes = tf.concat(self.dtimes_seq[1:], self.dtimes_seq[:1])
 
-            # compute lambda (mu + sum<alpha * exp(-delta * elapse)>)
-            # shape -> [batch_size, max_len, hidden_dim]
-            left_term = mus
-            # shape -> [batch_size, max_len, hidden_dim]
-            right_term = tf.reduce_sum(alphas * tf.exp(-deltas * elapses), axis=-2)
-            # shape -> [batch_size, max_len, hidden_dim]
-            imply_lambdas = left_term + right_term
+            # shape -> [batch_size, max_len, max_len, 1] (lower triangular: positive, upper: negative)
+            base_elapses = tf.expand_dims(cum_dtimes[:, None, :] - cum_dtimes[:, :, None], axis=-1)
 
-            return imply_lambdas
+            # compute lambdas
+            target_elapses = base_elapses + target_dtimes[:, None, :, None]
+            # [batch_size, max_len, process_dim]
+            lambdas = self.compute_lambda(mus, alphas, deltas, target_elapses)
 
-    def inference_layer(self, lambdas):
-        """
-        :param lambdas: [batch_size, max_len, hidden_dim]
+            if self.loss_function == 'loglikelihood':
+                # use loop to avoid memory explode
+                # general tensors
+
+                # [max_len, batch_size, n_sample, hidden_dim]
+                mus_trans = tf.transpose(mus, perm=[1, 0, 2])[:, :, None]
+                # [max_len, batch_size, n_sample, max_len, hidden_dim]
+                alphas_trans = tf.transpose(alphas, perm=[1, 0, 2, 3])[:, :, None]
+                deltas_trans = tf.transpose(deltas, perm=[1, 0, 2, 3])[:, :, None]
+                base_elapses_trans = tf.transpose(base_elapses, perm=[1, 0, 2, 3])[:, :, None]
+
+                # sample lambdas for loss.
+
+                dtimes_loss_samples = tf.linspace(start=0.0,
+                                                  stop=1.0,
+                                                  num=self.n_loss_integral_sample)
+                # [batch_size, n_sample, max_len]
+                dtimes_loss_samples = target_dtimes[:, None, :] * dtimes_loss_samples[None, :, None]
+
+                # loop over max_len
+                scan_shape = tf.stack([batch_size, self.n_loss_integral_sample, self.process_dim])
+                init_shape_var = tf.zeros(scan_shape)
+
+                # [max_len, batch_size, n_pred_integral_sample, process_dim]
+                lambdas_loss_samples = tf.scan(
+                    self.get_compute_lambda_forward_fn(dtimes_loss_samples[:, :, :, None]),
+                    (
+                        mus_trans,
+                        alphas_trans,
+                        deltas_trans,
+                        base_elapses_trans
+                    ),
+                    initializer=init_shape_var)
+                # [batch_size, max_len, n_loss_integral_sample, process_dim]
+                lambdas_loss_samples = tf.transpose(lambdas_loss_samples, perm=[1, 0, 2, 3])
+
+                # sample lambdas for prediction.
+
+                # [batch_size, n_sample, max_len]
+                dtimes_pred_samples = tf.linspace(start=0.0,
+                                                  stop=self.max_time_pred,
+                                                  num=self.n_pred_integral_sample)[None, :, None, None]
+                # use loop to avoid memory explode
+                # loop over max_len
+                scan_shape = tf.stack([batch_size, self.n_pred_integral_sample, self.process_dim])
+                init_shape_var = tf.zeros(scan_shape)
+
+                # [max_len, batch_size, n_pred_integral_sample, process_dim]
+                lambdas_pred_samples = tf.scan(
+                    self.get_compute_lambda_forward_fn(dtimes_pred_samples[:, :, :, None]),
+                    (
+                        mus_trans,
+                        alphas_trans,
+                        deltas_trans,
+                        base_elapses_trans
+                    ),
+                    initializer=init_shape_var)
+                # [batch_size, max_len, n_pred_integral_sample, process_dim]
+                lambdas_pred_samples = tf.transpose(lambdas_pred_samples, perm=[1, 0, 2, 3])
+
+                return lambdas, lambdas_loss_samples, tf.transpose(dtimes_loss_samples, perm=[0, 2, 1]), \
+                       lambdas_pred_samples, tf.transpose(dtimes_pred_samples, perm=[0, 2, 1])
+            else:
+                return lambdas, None, None, None, None
+
+    def get_compute_lambda_forward_fn(self, elapse_bias):
+        compute_lambda_fn = self.compute_lambda
+
+        def forward_fn(acc, item):
+            mu, alpha, delta, elapse = item
+            return compute_lambda_fn(mu, alpha, delta, elapse + elapse_bias)
+
+        return forward_fn
+
+    def compute_lambda(self, mu, alpha, delta, elapse):
+        """ compute lambda (mu + sum<alpha * exp(-delta * elapse))
+        :param mu: [..., hidden_dim]
+        :param alpha: [..., n_ob, 1(hidden_dim)]
+        :param delta: [..., n_ob, 1(hidden_dim)]
+        :param elapse: [..., n_ob, 1]
         :return:
         """
-        type_inference_layer = layers.Dense(self.process_dim, activation=None)
-        time_inference_layer = layers.Dense(1, activation=None)
+        with tf.variable_scope('lambda_layer', reuse=tf.AUTO_REUSE):
+            lambda_w = tf.get_variable('lambda_w', shape=[self.hidden_dim, self.process_dim], dtype=tf.float32,
+                                       initializer=tf.glorot_normal_initializer())
+            lambda_b = tf.get_variable('lambda_b', shape=[self.process_dim], dtype=tf.float32,
+                                       initializer=tf.constant_initializer(0.1))
+        # shape -> [..., hidden_dim]
+        left_term = mu
 
-        # shape -> [batch_size, max_len, process_dim]
-        pred_type_logits = type_inference_layer(lambdas)
-        # shape -> [batch_size, max_len]
-        pred_time = tf.squeeze(time_inference_layer(lambdas), axis=-1)
+        # to avoid nan calculated by exp after (nan * 0 = nan)
+        elapse = tf.abs(elapse)
 
-        return pred_type_logits, pred_time
+        # shape -> [..., hidden_dim]
+        right_term = tf.reduce_sum(alpha * tf.exp(-delta * elapse), axis=-2)
+        # shape -> [..., hidden_dim]
+        imply_lambdas = left_term + right_term
 
-    def compute_all_loss(self, pred_type_logits, pred_times, seq_mask):
-        with tf.variable_scope('loss'):
-            seq_mask = seq_mask[:, 1:]
-            # (batch_size, max_len - 1, process_dim)
-            type_label = self.types_seq_one_hot[:, 1:]
-
-            pred_type_logits = pred_type_logits[:, :-1]
-            pred_type_logits = pred_type_logits - tf.reduce_max(pred_type_logits, axis=-1, keepdims=True)
-            pred_type_proba = tf.nn.softmax(pred_type_logits, axis=-1) + 1e-8
-
-            # (batch_size, max_len - 1)
-            cross_entropy = tf.reduce_sum(- tf.log(pred_type_proba) * type_label, axis=-1)
-
-            type_loss = tf.reduce_mean(tf.boolean_mask(cross_entropy, seq_mask))
-
-            dtimes_pred = pred_times[:, :-1]
-            dtimes_label = self.dtimes_seq[:, 1:]
-
-            time_diff = tf.boolean_mask(dtimes_pred - dtimes_label, seq_mask)
-
-            time_loss = tf.reduce_mean(tf.abs(time_diff))
-
-            return type_loss + time_loss
+        return tensordot(imply_lambdas, lambda_w) + lambda_b

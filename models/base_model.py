@@ -60,18 +60,14 @@ class BaseModel(object):
         raise RuntimeError('No model named ' + model_name)
 
     # ------------------ general functions for subclasses --------------------
-    def hybrid_inference(self, imply_lambdas):
+    def hybrid_inference(self, lambdas):
         process_dim = self.process_dim
         with tf.variable_scope('hybrid_inference'):
             # create layers
-            lambda_layer = layers.Dense(process_dim, activation=tf.nn.tanh)
             type_inference_layer = layers.Dense(process_dim, activation=None)
             time_inference_layer = layers.Dense(1, activation=None)
 
             # computation
-            # [batch_size, max_len, process_dim]
-            lambdas = lambda_layer(imply_lambdas)
-
             # shape -> [batch_size, max_len, process_dim]
             pred_type_logits = type_inference_layer(lambdas)
             # shape -> [batch_size, max_len]
@@ -79,10 +75,10 @@ class BaseModel(object):
 
         return pred_type_logits, pred_time
 
-    def intensity_inference(self, lambdas_pred_samples, dtimes_pred_samples):
+    def loglikelihood_inference(self, lambdas_pred_samples, dtimes_pred_samples):
         """ Predict the type and time from intensity function over infinite time.
         :param lambdas_pred_samples: [batch_size, max_len, n_pred_sample, process_dim]
-        :param dtimes_pred_samples: [1, 1, n_pred_sample]
+        :param dtimes_pred_samples: [batch_size, max_len, n_loss_sample]
         :return:
         """
         with tf.variable_scope('intensity_inference'):
@@ -160,7 +156,7 @@ class BaseModel(object):
             # shape -> [batch_size, max_len - 1, n_loss_sample]
             lambdas_total_samples = tf.reduce_sum(lambdas_loss_samples[:, :-1], axis=-1)
             # shape -> [batch_size, max_len - 1]
-            lambdas_integral = self.trapezium_integral(lambdas_total_samples, dtimes_loss_samples[:, 1:])
+            lambdas_integral = self.trapezium_integral(lambdas_total_samples, dtimes_loss_samples[:, :-1])
 
             term_2 = tf.reduce_sum(lambdas_total_mask * lambdas_integral)
 
