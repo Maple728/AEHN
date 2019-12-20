@@ -18,12 +18,11 @@ class BaseModel(object):
         self.process_dim = model_config['process_dim']
         self.hidden_dim = model_config['hidden_dim']
 
-        self.n_loss_integral_sample = model_config.get('num_integral_sample', 10)
+        self.n_loss_integral_sample = model_config.get('n_loss_integral_sample', 10)
         self.n_pred_integral_sample = model_config.get('n_pred_integral_sample', 50)
-        self.max_time_pred = model_config.get('max_time_pred', 2.0)
+        self.max_time_pred = model_config.get('max_time_pred', 1.0)
 
-        self.predict_function = model_config.get('predict_function')
-        self.loss_function = model_config.get('loss_function')
+        self.pred_method = model_config.get('pred_method')
 
         with tf.variable_scope('model_input'):
             # --------------- placeholders -----------------
@@ -78,7 +77,7 @@ class BaseModel(object):
     def loglikelihood_inference(self, lambdas_pred_samples, dtimes_pred_samples):
         """ Predict the type and time from intensity function over infinite time.
         :param lambdas_pred_samples: [batch_size, max_len, n_pred_sample, process_dim]
-        :param dtimes_pred_samples: [batch_size, max_len, n_loss_sample]
+        :param dtimes_pred_samples: [batch_size, max_len, n_pred_sample]
         :return:
         """
         with tf.variable_scope('intensity_inference'):
@@ -98,9 +97,10 @@ class BaseModel(object):
             # compute type prediction
             # [batch_size, max_len, n_pred_sample, process_dim]
             type_ratio_samples = lambdas_pred_samples / lambdas_total_samples[:, :, :, None]
+
             # [batch_size, max_len, process_dim]
             pred_type_logits = self.trapezium_integral(type_ratio_samples * density_samples[:, :, :, None],
-                                                     dtimes_pred_samples[:, :, :, None])
+                                                       dtimes_pred_samples[:, :, :, None])
 
         return pred_type_logits, pred_times
 
@@ -144,27 +144,41 @@ class BaseModel(object):
         :param dtimes_loss_samples: [batch_size, max_len, n_loss_sample]
         :return:
         """
-        seq_event_onehot = self.types_seq_one_hot
         with tf.variable_scope('shuffle_loglikelihood_loss'):
+            # Shuffle label and prediction
+
+            # label move forward one point
+            # [batch_size, max_len - 1, process_dim]
+            seq_event_onehot = self.types_seq_one_hot[:, 1:]
+            # [batch_size, max_len - 1]
+            seq_zero_mask = tf.reduce_sum(seq_event_onehot, axis=-1)
+            # [batch_size, max_len - 1, n_loss_sample]
+            dtimes_loss_samples = dtimes_loss_samples[:, :-1]
+
+            # prediction truncate the last point (no label)
+            # [batch_size, max_len - 1, process_dim]
+            lambdas = lambdas[:, :-1]
+            # [batch_size, max_len - 1, n_loss_sample]
+            lambdas_total_samples = tf.reduce_sum(lambdas_loss_samples[:, :-1], axis=-1)
+
+            # Compute loglikelihood loss
+
             # shape -> [batch_size, max_len - 1]
-            target_lambdas = tf.reduce_sum(lambdas[:, :-1] * seq_event_onehot[:, 1:], axis=-1)
+            target_lambdas = tf.reduce_sum(lambdas * seq_event_onehot, axis=-1)
             target_lambdas_masked = tf.boolean_mask(target_lambdas, target_lambdas > 0)
             term_1 = tf.reduce_sum(tf.log(target_lambdas_masked))
 
-            # shape -> [batch_size, max_len - 1, 1]
-            lambdas_total_mask = tf.reduce_sum(seq_event_onehot[:, 1:], axis=-1, keepdims=True)
-            # shape -> [batch_size, max_len - 1, n_loss_sample]
-            lambdas_total_samples = tf.reduce_sum(lambdas_loss_samples[:, :-1], axis=-1)
             # shape -> [batch_size, max_len - 1]
-            lambdas_integral = self.trapezium_integral(lambdas_total_samples, dtimes_loss_samples[:, :-1])
+            lambdas_integral = self.trapezium_integral(lambdas_total_samples, dtimes_loss_samples)
+            term_2 = tf.reduce_sum(seq_zero_mask * lambdas_integral)
 
-            term_2 = tf.reduce_sum(lambdas_total_mask * lambdas_integral)
+            events_loss = - (term_1 - term_2)
+            n_event = tf.reduce_sum(seq_zero_mask)
 
-            return - (term_1 - term_2)
+            return events_loss / n_event
 
     def get_acc_rect_integral(self, values, interval):
-        """
-
+        """ Calculate the accumulated rectangular integral over dim-1 (samples dim)
         :param values: [batch_size, None, n_samples, ...]
         :param interval: float type
         :return: the shape is same sa values
@@ -173,7 +187,7 @@ class BaseModel(object):
         return integral
 
     def trapezium_integral(self, values, dtimes):
-        """
+        """ Trapezium integral over dim-1 (samples dim).
         :param values: [batch_size, None, n_samples, ...]
         :param dtimes: the shape is same as values  or float
         :return: [batch_size, None, ...]

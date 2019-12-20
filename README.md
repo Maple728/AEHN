@@ -14,6 +14,12 @@ pip install -r requirements.txt
 ## Datasets
 All datasets can be downloaded from [BaiduDisk](https://pan.baidu.com/s/1H6mfLB1MErHuh6gDrs88sw).
 
+1. Retweet (retweet)
+ - num of event: 3
+
+2. StackOverflow (so)
+ - num of event: 22
+
 
 ## Model Training
 ```bash
@@ -29,13 +35,5 @@ The trained model is saved in a folder set up in configuration file.
 
 ## Model Evaluating
 ```bash
-# Retweet
 python eval.py --config_filename={saved_model_config_filename}
 ```
-
-## Results
-
-| Model | Dataset | type_acc | time_rmse |
-| :----:| :-----: | :------: | :-------: |
-| AEHN_simple |   so  | 45.85%   |   0.64    |
-| AEHN_simple |retweet|  59.91% | 274.64 |

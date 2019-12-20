@@ -42,6 +42,7 @@ class DataSource(object):
         :return: [feat_arr, target_arr]
         """
         if self.is_cached:
+            # load all partitions data from cache in disk
             partition_count = 0
             for filename in os.listdir(self.cache_path):
                 filepath = os.path.join(self.cache_path, filename)
@@ -54,13 +55,14 @@ class DataSource(object):
             if partition_count == 0:
                 raise RuntimeError("The data isn't cached")
         else:
+            # load all partitions data from data callback online.
             for i, records in enumerate(self._retrieve_data_callback()):
                 # cache data into disk
                 filepath = os.path.join(self.cache_path, str(i) + '.pkl')
                 self._save_records(filepath, records)
 
                 yield records
-            # set cache flag to true
+            # set cached flag to true
             self.is_cached = True
 
     @staticmethod

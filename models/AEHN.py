@@ -80,7 +80,7 @@ class AEHN(BaseModel):
 
             # 3. Inference layer and loss function
             # [batch_size, max_len, process_dim], [batch_size, max_len]
-            if self.loss_function == 'loglikelihood':
+            if self.pred_method == 'loglikelihood':
                 pred_type_logits, pred_time = self.loglikelihood_inference(lambdas_pred_samples, dtimes_pred_samples)
                 self.loss = self.shuffle_loglikelihood_loss(lambdas, lambdas_loss_samples, dtimes_loss_samples)
             else:
@@ -116,8 +116,8 @@ class AEHN(BaseModel):
             mu_layer = layers.Dense(self.hidden_dim, activation=tf.nn.softplus, name='mu_layer')
 
         with tf.name_scope('intensity_layer'):
-            batch_size, max_len = tf.shape(x_input)[:2]
-
+            batch_size = tf.shape(x_input)[0]
+            max_len = tf.shape(x_input)[1]
             # compute mu
             # shape -> [batch_size, max_len, hidden_dim]
             mus = mu_layer(x_input)
@@ -146,7 +146,7 @@ class AEHN(BaseModel):
 
             # (dt_1, dt_2, ..., dt_0) (the last one is not used).
             # [batch_size, max_len]
-            target_dtimes = tf.concat(self.dtimes_seq[1:], self.dtimes_seq[:1])
+            target_dtimes = tf.concat([self.dtimes_seq[:, 1:], self.dtimes_seq[:, :1]], axis=-1)
 
             # shape -> [batch_size, max_len, max_len, 1] (lower triangular: positive, upper: negative)
             base_elapses = tf.expand_dims(cum_dtimes[:, None, :] - cum_dtimes[:, :, None], axis=-1)
@@ -156,7 +156,7 @@ class AEHN(BaseModel):
             # [batch_size, max_len, process_dim]
             lambdas = self.compute_lambda(mus, alphas, deltas, target_elapses)
 
-            if self.loss_function == 'loglikelihood':
+            if self.pred_method == 'loglikelihood':
                 # use loop to avoid memory explode
                 # general tensors
 
@@ -179,7 +179,7 @@ class AEHN(BaseModel):
                 scan_shape = tf.stack([batch_size, self.n_loss_integral_sample, self.process_dim])
                 init_shape_var = tf.zeros(scan_shape)
 
-                # [max_len, batch_size, n_pred_integral_sample, process_dim]
+                # [max_len, batch_size, n_loss_integral_sample, process_dim]
                 lambdas_loss_samples = tf.scan(
                     self.get_compute_lambda_forward_fn(dtimes_loss_samples[:, :, :, None]),
                     (
@@ -197,7 +197,7 @@ class AEHN(BaseModel):
                 # [batch_size, n_sample, max_len]
                 dtimes_pred_samples = tf.linspace(start=0.0,
                                                   stop=self.max_time_pred,
-                                                  num=self.n_pred_integral_sample)[None, :, None, None]
+                                                  num=self.n_pred_integral_sample)[None, :, None]
                 # use loop to avoid memory explode
                 # loop over max_len
                 scan_shape = tf.stack([batch_size, self.n_pred_integral_sample, self.process_dim])
@@ -231,7 +231,8 @@ class AEHN(BaseModel):
         return forward_fn
 
     def compute_lambda(self, mu, alpha, delta, elapse):
-        """ compute lambda (mu + sum<alpha * exp(-delta * elapse))
+        """ compute imply lambda (mu + sum<alpha * exp(-delta * elapse)), and then transfer it to lambda with
+        dimension process_dim.
         :param mu: [..., hidden_dim]
         :param alpha: [..., n_ob, 1(hidden_dim)]
         :param delta: [..., n_ob, 1(hidden_dim)]
@@ -254,4 +255,8 @@ class AEHN(BaseModel):
         # shape -> [..., hidden_dim]
         imply_lambdas = left_term + right_term
 
-        return tensordot(imply_lambdas, lambda_w) + lambda_b
+        return tf.nn.softplus(tensordot(imply_lambdas, lambda_w) + lambda_b)
+
+    def sample_lambda_by_scan(self, lambda_over_step_scan_fn, scan_elems, scan_shape_var):
+        # TODO
+        pass
