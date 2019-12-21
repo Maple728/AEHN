@@ -9,6 +9,8 @@
 import os
 from functools import reduce
 from operator import mul
+import time
+import logging
 
 from lib.metrics import *
 
@@ -79,16 +81,16 @@ def set_random_seed(seed=9899):
     tf.set_random_seed(seed)
 
 
-def make_config_string(config):
+def make_config_string(config, key_len=4):
     """ Generate a name for config.
     :param config:
+    :param key_len: the length of printed key
     :return:
     """
-    key_len = 4
     str_config = ''
     for k, v in config.items():
-        str_config += k[:key_len] + '-' + str(v) + '_'
-    return str_config[:-1]
+        str_config += '[' + k[:key_len] + '-' + str(v) + ']'
+    return str_config
 
 
 def window_rolling(origin_data, window_size):
@@ -149,6 +151,10 @@ def create_folder(*args):
 
 
 def concat_arrs_of_dict(dict_list):
+    """ Concatenate each ndarray with the same key in the dict_list in 0-dimension.
+    :param dict_list:
+    :return: dict containing concatenated values
+    """
     res = dict()
 
     keys = dict_list[0].keys()
@@ -159,3 +165,53 @@ def concat_arrs_of_dict(dict_list):
         res[k] = np.concatenate(arr_list, axis=0)
 
     return res
+
+
+def get_logger(filename=None):
+    logger = logging.Logger(filename)
+
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s')
+    # formatter = logging.Formatter('%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s')
+
+    # Add stdout stream handler
+    sh = logging.StreamHandler()
+    sh.setFormatter(formatter)
+    logger.addHandler(sh)
+
+    # Add file handler
+    if filename:
+        fh = logging.FileHandler(filename, mode='a')
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
+
+    return logger
+
+
+class Timer(object):
+    """
+    Count the elapse between start and end time.
+    """
+
+    def __init__(self, unit='s'):
+        SECOND_UNIT = 1
+        MINUTE_UNIT = 60
+        HOUR_UNIT = 1440
+
+        unit = unit.lower()
+        if unit == 's':
+            self._unit = SECOND_UNIT
+        elif unit == 'm':
+            self._unit = MINUTE_UNIT
+        elif unit == 'h':
+            self._unit = HOUR_UNIT
+        else:
+            raise RuntimeError('Unknown unit:', unit)
+        # default start time is set to the time the object initialized
+        self._start_time = time.time()
+
+    def start(self):
+        self._start_time = time.time()
+
+    def end(self):
+        end_time = time.time()
+        return (end_time - self._start_time) / self._unit

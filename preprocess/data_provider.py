@@ -10,7 +10,7 @@ from abc import abstractmethod
 import numpy as np
 
 from lib.utils import yield2batch_data, get_metrics_callback_from_names
-from lib.scalers import DictScaler, ZeroMaxScaler
+from lib.scalers import DictScaler, ZeroMaxScaler, VoidScaler
 
 
 class AbstractDataProvider(object):
@@ -49,7 +49,7 @@ class DataProvider(AbstractDataProvider):
         self._data_source = data_source
         self._batch_size = data_config['batch_size']
         self._metrics_function = get_metrics_callback_from_names(data_config['metrics'])
-        self._scaler = scaler if scaler else DictScaler(dtimes=ZeroMaxScaler)
+        self._scaler = scaler if scaler else DictScaler(dtimes=VoidScaler)
         self._is_first_iterate = True
 
         self._type_padding = data_config['process_dim']

@@ -14,7 +14,7 @@ import numpy as np
 import tensorflow as tf
 import yaml
 
-from lib.utils import get_num_trainable_params, make_config_string, create_folder, concat_arrs_of_dict
+from lib.utils import get_num_trainable_params, make_config_string, create_folder, concat_arrs_of_dict, Timer, get_logger
 from training.lr_scheduler import LRScheduler
 from models import *
 
@@ -113,10 +113,10 @@ class ModelRunner(object):
 
         # new model or existed model
         if model_path is not None:
-            # restore model if existed
+            # trained model existed, then restore it.
             self._model_saver.restore(sess, model_path)
             epoch_num += 1
-            print('Restore model from', model_path)
+            print('Restore model from {}', model_path)
             # set model folder
             self._model_folder = os.path.dirname(os.path.dirname(model_path))
         else:
@@ -125,23 +125,27 @@ class ModelRunner(object):
             # initialize variables
             sess.run([tf.global_variables_initializer()])
 
-        print('Training starts on dataset', self._data_config['data_name'])
-        print('----------Trainable parameter count:', get_num_trainable_params(), 'in model', self._model_folder)
+        logger = get_logger(os.path.join(self._model_folder, 'train.log'))
 
+        logger.info(f'Training starts on dataset {self._data_config["data_name"]}')
+        logger.info(f'----------Trainable parameter count: {get_num_trainable_params()} of model {self._model_folder}')
+
+        timer = Timer('m')
         best_valid_loss = float('inf')
         lr = lr_scheduler.get_lr()
         while lr > 0 and epoch_num <= max_epoch:
 
-            # train
-            loss, _, _ = self._run_epoch(sess, train_data_provider,
-                                         lr, is_train=True)
+            # Train
+            timer.start()
+            loss, _, _ = self._run_epoch(sess, train_data_provider, lr, is_train=True)
+            elapse = timer.end()
 
-            print(f'Epoch {epoch_num}: train loss - {loss}, learning rate - {lr}')
-            # valid
-            loss, _, _ = self._run_epoch(sess, valid_data_provider,
-                                         lr, is_train=False)
+            logger.info(f'Epoch {epoch_num}: train loss - {loss}, learning rate - {lr}. Cost time: {elapse:.3f}m')
 
-            # update after train and valid
+            # Valid
+            loss, _, _ = self._run_epoch(sess, valid_data_provider, lr, is_train=False)
+
+            # Update after train and valid
             # update lr
             lr = lr_scheduler.update_lr(loss=loss, epoch_num=epoch_num)
             # update train_config
@@ -153,15 +157,17 @@ class ModelRunner(object):
                 # save best model
                 self._save_model_with_config(sess)
 
-                # test
+                # Test
+                timer.start()
                 loss, preds, labels = self._run_epoch(sess, test_data_provider,
                                                       lr, is_train=False)
+                elapse = timer.end()
                 metrics = test_data_provider.get_metrics(preds, labels)
                 str_metrics = str(metrics)
-                print('---Test Loss:', loss, str_metrics)
+                logger.info(f'---Test Loss: {loss}, metrics: {str_metrics}. Cost time: {elapse:.3f}m')
 
             epoch_num += 1
-        print('Training Finished!')
+        logger.info('Training Finished!')
 
     def evaluate_model(self, sess, data_provider):
         self.restore_model(sess)

@@ -20,9 +20,6 @@ class AbstractScaler(object):
     def fit(self, records):
         pass
 
-    @abstractmethod
-    def fit_scaling(self, records):
-        pass
 
     @abstractmethod
     def scaling(self, records):
@@ -31,6 +28,10 @@ class AbstractScaler(object):
     @abstractmethod
     def inverse_scaling(self, scaled_records):
         pass
+
+    def fit_scaling(self, records):
+        self.fit(records)
+        return self.scaling(records)
 
 
 class DictScaler(AbstractScaler):
@@ -67,6 +68,20 @@ class DictScaler(AbstractScaler):
             else:
                 dict_data[k] = scaled_records
         return dict_data
+
+
+class VoidScaler(AbstractScaler):
+    def __init__(self):
+        pass
+
+    def fit(self, records):
+        pass
+
+    def scaling(self, records):
+        return records
+
+    def inverse_scaling(self, scaled_records):
+        return scaled_records
 
 
 class StandZeroMaxScaler(AbstractScaler):

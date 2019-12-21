@@ -48,13 +48,13 @@ class DataLoader(object):
         else:
             # keys(types, timesteps)   format:n_seqs * [seq_len]
             with open(self._data_filename.format('train'), 'rb') as f:
-                train_records = pickle.load(f)['train']
+                train_records = pickle.load(f)
 
-            with open(self._data_filename.format('dev'), 'rb') as f:
-                valid_records = pickle.load(f)['dev']
+            with open(self._data_filename.format('valid'), 'rb') as f:
+                valid_records = pickle.load(f)
 
             with open(self._data_filename.format('test'), 'rb') as f:
-                test_records = pickle.load(f)['test']
+                test_records = pickle.load(f)
 
             # wrapping data into DataSource
             train_ds = DataSource(self._data_name + '_train', cache_dir=self._cache_dir,
