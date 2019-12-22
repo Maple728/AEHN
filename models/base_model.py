@@ -9,6 +9,7 @@
 from abc import abstractmethod
 import tensorflow as tf
 from tensorflow.keras import layers
+from lib.utils import tensordot
 
 
 class BaseModel(object):
@@ -272,6 +273,84 @@ class Attention:
 
         # (batch_size, num_queries, num_keys, cell_units)
         context_vector = attention_weight * k
+
+        # (batch_size, num_queries, cell_units)
+        context_vector = tf.reduce_sum(context_vector, axis=-2)
+
+        return context_vector, attention_weight
+
+
+class SelfAttention:
+    def __init__(self, cell_units, reuse=tf.AUTO_REUSE):
+        """Reference  https://arxiv.org/pdf/1907.07561  """
+        self.cell_units = cell_units
+        with tf.variable_scope('attention_layer', reuse=reuse):
+            self.attention_v = layers.Dense(cell_units, name='v')
+
+    def compute_attention_weight(self, decoder_state, encoder_output, pos_mask=None):
+        """
+        :param decoder_state: (batch_size, num_queries, cell_units)
+        :param encoder_output: (batch_size, num_keys, cell_units)
+        :param pos_mask: ['self-right', 'right', None]
+        :return: (batch_size, num_queries, cell_units), (batch_size, num_queries, num_keys, 1)
+        """
+
+        MASKED_VAL = - 2 ** 32 + 1
+
+        # (batch_size, num_queries, 1, cell_units)
+        q = decoder_state[:, :, None, :]
+        # (batch_size, 1, num_keys, cell_units)
+        k = encoder_output[:, None, :, :]
+
+        # (batch_size, num_queries, num_keys)
+        # similarity between encoder/decoder states
+        # base on equation(3) in the paper
+        score = tf.reduce_sum(tf.exp(q * k), axis=-1)
+
+        if pos_mask:
+            ones_mat = tf.ones_like(score)
+            zeros_mat = tf.zeros_like(score)
+            masked_val_mat = ones_mat * MASKED_VAL
+
+            # (batch_size, num_queries, num_keys)
+            lower_diag_masks = tf.linalg.LinearOperatorLowerTriangular(ones_mat).to_dense()
+
+            if pos_mask == 'self-right':
+                # mask values for the upper right area, excluding the diagonal
+                # (batch_size, num_queries, num_keys)
+                score = tf.where(tf.equal(lower_diag_masks, 0),
+                                 masked_val_mat,
+                                 score)
+                attention_weight = tf.nn.softmax(score, axis=-1)
+                attention_weight = tf.where(tf.equal(lower_diag_masks, 0),
+                                            zeros_mat,
+                                            attention_weight)
+            elif pos_mask == 'right':
+                # mask values for the upper right area, including the diagonal
+                # transpose to upper triangle
+                lower_masks = tf.transpose(lower_diag_masks, perm=[0, 2, 1])
+
+                score = tf.where(tf.equal(lower_masks, 1),
+                                 masked_val_mat,
+                                 score)
+                attention_weight = tf.nn.softmax(score, axis=-1)
+                attention_weight = tf.where(tf.equal(lower_masks, 1),
+                                            zeros_mat,
+                                            attention_weight)
+
+            else:
+                raise RuntimeError('Unknown pas_mask: {}'.format(pos_mask))
+
+            # (batch_size, num_queries, num_keys, 1)
+            attention_weight = tf.expand_dims(attention_weight, axis=-1)
+        else:
+
+            # (batch_size, num_queries, num_keys, 1)
+            attention_weight = tf.nn.softmax(score, axis=-2)
+
+        # (batch_size, num_queries, num_keys, cell_units)
+        # base on equation (3) in the paper
+        context_vector = attention_weight * self.attention_v(k)
 
         # (batch_size, num_queries, cell_units)
         context_vector = tf.reduce_sum(context_vector, axis=-2)

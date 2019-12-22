@@ -7,8 +7,6 @@
 @desc:
 """
 import pickle
-import numpy as np
-
 from preprocess.data_source import DataSource
 
 
@@ -61,8 +59,7 @@ class DataLoader(object):
                                   retrieve_data_callback=get_static_data_callback(train_records))
             valid_ds = DataSource(self._data_name + '_valid', cache_dir=self._cache_dir,
                                   retrieve_data_callback=get_static_data_callback(valid_records))
-            test_ds = DataSource(self._data_name + '_test',cache_dir=self._cache_dir,
+            test_ds = DataSource(self._data_name + '_test', cache_dir=self._cache_dir,
                                  retrieve_data_callback=get_static_data_callback(test_records))
 
         return train_ds, valid_ds, test_ds
-
