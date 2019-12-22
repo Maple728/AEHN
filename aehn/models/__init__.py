@@ -9,5 +9,9 @@
 from aehn.models.base_model import BaseModel
 from aehn.models.AEHN import AEHN
 
+from aehn.models.base_model import BaseModel, SAHPAttention
+from aehn.models.AEHN import AEHN
+
 __all__ = ['BaseModel',
+           'SAHPAttention',
            'AEHN']

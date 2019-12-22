@@ -1,4 +1,4 @@
-from aehn.models import BaseModel, SelfAttention
+from aehn.models import BaseModel, SAHPAttention
 import tensorflow as tf
 from tensorflow.keras import layers
 
@@ -72,7 +72,7 @@ class SAHP(BaseModel):
         :return: [batch_size, max_len, hidden_dim]
         """
         with tf.variable_scope('intensity_layer', reuse=reuse):
-            attention_layer = SelfAttention(self.hidden_dim)
+            attention_layer = SAHPAttention(self.hidden_dim)
 
         with tf.name_scope('intensity_layer'):
             batch_size = tf.shape(x_input)[0]
@@ -83,8 +83,13 @@ class SAHP(BaseModel):
             h_states, _ = attention_layer.compute_attention_weight(x_input,
                                                                    x_input,
                                                                    pos_mask='self-right')
+
+            # (dt_1, dt_2, ..., dt_0) (the last one is not used).
+            # [batch_size, max_len]
+            target_dtimes = tf.concat([self.dtimes_seq[:, 1:], self.dtimes_seq[:, :1]], axis=-1)
+
             # (batch_size, max_len, process_dim)
-            lambdas = self.compute_lambda(h_states, self.dtimes_seq)
+            lambdas = self.compute_lambda(h_states, target_dtimes)
 
             if self.pred_method == 'loglikelihood':
                 # sample lambdas for loss.
@@ -92,16 +97,54 @@ class SAHP(BaseModel):
                                                   stop=1.0,
                                                   num=self.n_loss_integral_sample)
 
-                # sample lambdas for prediction.
+                # [batch_size, n_sample, max_len]
+                dtimes_loss_samples = target_dtimes[:, None, :] * dtimes_loss_samples[None, :, None]
 
+                # loop over max_len
+                scan_shape = tf.stack([batch_size, self.n_loss_integral_sample, self.process_dim])
+                init_shape_var = tf.zeros(scan_shape)
+
+                # [max_len, batch_size, n_sample, hidden_dim]
+                h_states_trans = tf.transpose(h_states, perm=[1, 0, 2])[:, :, None, :]
+
+                # [max_len, batch_size, n_loss_integral_sample, process_dim]
+                lambdas_loss_samples = tf.scan(
+                    self.get_compute_lambda_forward_fn(dtimes_loss_samples[:, :, :, None]),
+                    (h_states_trans),
+                    initializer=init_shape_var)
+
+                # [batch_size, max_len, n_loss_integral_sample, process_dim]
+                lambdas_loss_samples = tf.transpose(lambdas_loss_samples, perm=[1, 0, 2, 3])
+
+
+                # sample lambdas for prediction.
                 # [batch_size, n_sample, max_len]
                 dtimes_pred_samples = tf.linspace(start=0.0,
                                                   stop=self.max_time_pred,
                                                   num=self.n_pred_integral_sample)[None, :, None]
+
                 # use loop to avoid memory explode
                 # loop over max_len
                 scan_shape = tf.stack([batch_size, self.n_pred_integral_sample, self.process_dim])
                 init_shape_var = tf.zeros(scan_shape)
+
+                # use loop to avoid memory explode
+                # loop over max_len
+                scan_shape = tf.stack([batch_size, self.n_pred_integral_sample, self.process_dim])
+                init_shape_var = tf.zeros(scan_shape)
+
+                # [max_len, batch_size, n_pred_integral_sample, process_dim]
+                lambdas_pred_samples = tf.scan(
+                    self.get_compute_lambda_forward_fn(dtimes_pred_samples[:, :, :, None]),
+                    (
+                        h_states_trans
+                    ),
+                    initializer=init_shape_var)
+                # [batch_size, max_len, n_pred_integral_sample, process_dim]
+                lambdas_pred_samples = tf.transpose(lambdas_pred_samples, perm=[1, 0, 2, 3])
+
+                return lambdas, lambdas_loss_samples, tf.transpose(dtimes_loss_samples, perm=[0, 2, 1]), \
+                       lambdas_pred_samples, tf.transpose(dtimes_pred_samples, perm=[0, 2, 1])
 
     def lambda_decay(self, mu, alpha, delta, time_decay):
         return tf.nn.softplus(mu + alpha * tf.exp(-delta * time_decay))
@@ -123,3 +166,13 @@ class SAHP(BaseModel):
             # (batch_size, max_len, process_dim)
             lambdas = self.lambda_decay(mu, alpha, delta, dtimes)
         return lambdas
+
+    # TODO: fix this
+    def get_compute_lambda_forward_fn(self, dtimes):
+        compute_lambda_fn = self.compute_lambda
+
+        def forward_fn(acc, item):
+            h_state = item
+            return compute_lambda_fn(h_state, dtimes)
+
+        return forward_fn
