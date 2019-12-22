@@ -39,7 +39,7 @@ def gen_data_from_synthetic_data(data_folder_name, data_csv_name):
 def gen_data_from_retweet_or_so():
     folder = 'data_retweet'
     train_fname = folder + '/train.pkl'
-    valid_fname = folder + '/dev.pkl'
+    valid_fname = folder + '/valid.pkl'
     test_fname = folder + '/test.pkl'
 
     with open(train_fname, 'rb') as f:

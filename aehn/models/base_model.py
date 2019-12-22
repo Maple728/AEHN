@@ -279,7 +279,7 @@ class Attention:
         return context_vector, attention_weight
 
 
-class SelfAttention:
+class SAHPAttention:
     def __init__(self, cell_units, reuse=tf.AUTO_REUSE):
         """Reference  https://arxiv.org/pdf/1907.07561  """
         self.cell_units = cell_units

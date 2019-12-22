@@ -6,9 +6,10 @@
 @time: 2019/11/28 22:56
 @desc:
 """
-from aehn.models.base_model import BaseModel, Attention
+from aehn.models.base_model import BaseModel, Attention, SAHPAttention
 from aehn.models.AEHN import AEHN
 
 __all__ = ['BaseModel',
            'Attention',
+           'SAHPAttention',
            'AEHN']
