@@ -111,7 +111,7 @@ class AEHN(BaseModel):
         :return: [batch_size, max_len, hidden_dim]
         """
         with tf.variable_scope('intensity_layer', reuse=reuse):
-            attention_layer = Attention(self.hidden_dim, 'exp_dot')
+            attention_layer = Attention(self.hidden_dim, 'general')
             delta_layer = layers.Dense(self.hidden_dim, activation=tf.nn.softplus, name='delta_layer')
             mu_layer = layers.Dense(self.hidden_dim, activation=tf.nn.softplus, name='mu_layer')
 

@@ -12,6 +12,9 @@ import tensorflow as tf
 from tensorflow.keras import layers
 
 
+FLOAT_TYPE = tf.float32
+
+
 def tensordot(tensor_a, tensor_b):
     """ Tensor dot function. The last dimension of tensor_a and the first dimension of tensor_b must be the same.
     :param tensor_a:
@@ -20,6 +23,18 @@ def tensordot(tensor_a, tensor_b):
     """
     last_idx_a = len(tensor_a.get_shape().as_list()) - 1
     return tf.tensordot(tensor_a, tensor_b, [[last_idx_a], [0]])
+
+
+def gett_variable_weights(name, shape, collections=None):
+    return tf.get_variable(name, shape=shape, dtype=FLOAT_TYPE,
+                           initializer=tf.glorot_normal_initializer(),
+                           collections=collections)
+
+
+def get_variable_bias(name, shape, collections=None):
+    return tf.get_variable(name, shape=shape, dtype=FLOAT_TYPE,
+                           initializer=tf.constant_initializer(0.1),
+                           collections=collections)
 
 
 def get_tf_loss_function(loss_name):
