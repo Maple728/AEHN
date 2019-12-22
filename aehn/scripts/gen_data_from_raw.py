@@ -13,28 +13,27 @@ import numpy as np
 from aehn.lib.utilities import concat_arrs_of_dict
 
 
-def gen_data_from_self_inhibiting_data():
-    train_fname = 'data_selfcorrection/self_inhibiting_training.csv'
-    valid_fname = 'data_selfcorrection/self_inhibiting_validation.csv'
-    test_fname = 'data_selfcorrection/self_inhibiting_testing.csv'
+def gen_data_from_synthetic_data(data_folder_name, data_csv_name):
+    train_fname = '../data/{}/{}_training.csv'.format(data_folder_name, data_csv_name)
+    valid_fname = '../data/{}/{}_validation.csv'.format(data_folder_name, data_csv_name)
+    test_fname = '../data/{}/{}_testing.csv'.format(data_folder_name, data_csv_name)
 
-    def process_file(fname):
+    def process_file(fname, pkl_name):
         with open(fname, 'r') as file:
             lines = file.readlines()
-
-            ''.split()
-            data = [np.array([float(item) for item in line.split()]) for line in lines]
+            data = [np.array([float(item) for item in line.split(';')[0].split()]) for line in lines]
 
         res = dict()
         res['types'] = [np.array([0 for _ in record]) for record in data]
         res['timestamps'] = data
 
-        with open(fname + '.pkl', 'wb') as file:
+        pkl_file = '../data/{}/{}.pkl'.format(data_folder_name, pkl_name)
+        with open(pkl_file, 'wb') as file:
             pickle.dump(res, file)
 
-    process_file(train_fname)
-    process_file(valid_fname)
-    process_file(test_fname)
+    process_file(train_fname, 'train')
+    process_file(valid_fname, 'dev')
+    process_file(test_fname, 'test')
 
 
 def gen_data_from_retweet_or_so():
@@ -85,4 +84,7 @@ def gen_data_from_retweet_or_so():
 
 
 if __name__ == '__main__':
-    gen_data_from_retweet_or_so()
+    # gen_data_from_synthetic_data('data_poisson', 'poisson')
+    # gen_data_from_synthetic_data('data_exp_hawkes', 'exponential_hawkes')
+    # gen_data_from_synthetic_data('data_pl_hawkes', 'powerlaw_hawkes')
+    gen_data_from_synthetic_data('data_selfcorrection', 'self_inhibiting')
