@@ -88,3 +88,4 @@ if __name__ == '__main__':
     # gen_data_from_synthetic_data('data_exp_hawkes', 'exponential_hawkes')
     # gen_data_from_synthetic_data('data_pl_hawkes', 'powerlaw_hawkes')
     gen_data_from_synthetic_data('data_selfcorrection', 'self_inhibiting')
+

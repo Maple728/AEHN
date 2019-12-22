@@ -32,6 +32,7 @@ class ModelRunner(object):
         # the folders for model and tensor board
         self._model_folder = None
         self._tfb_folder = None
+        self._base_folder = self._config['base_dir']
 
         # build model
         self._model = BaseModel.generate_model_from_config(self._model_config)
@@ -59,8 +60,8 @@ class ModelRunner(object):
         timestamp = datetime.datetime.strftime(time, '%m%d%H%M%S')
         model_foldername = make_config_string(self._config['model']) + '_' + timestamp
 
-        self._model_folder = create_folder(self._config['base_dir'], model_foldername, 'models')
-        self._tfb_folder = create_folder(self._config['base_dir'], model_foldername, 'tfbs')
+        self._model_folder = create_folder(self._base_folder, model_foldername, 'models')
+        self._tfb_folder = create_folder(self._base_folder, model_foldername, 'tfbs')
 
     def _save_model_with_config(self, sess):
         train_config = self._train_config
@@ -125,7 +126,8 @@ class ModelRunner(object):
             # initialize variables
             sess.run([tf.global_variables_initializer()])
 
-        logger = get_logger(os.path.join(self._model_folder, 'train.log'))
+        # get logger for this training
+        logger = get_logger(os.path.join(self._base_folder, 'training.log'))
 
         logger.info(f'Training starts on dataset {self._data_config["data_name"]}')
         logger.info(f'----------Trainable parameter count: {get_num_trainable_params()} of model {self._model_folder}')

@@ -7,30 +7,10 @@
 @desc:
 """
 import os
-from functools import reduce
-from operator import mul
 import time
 import logging
 
 from aehn.lib.metrics import *
-
-
-def tensordot(tensor_a, tensor_b):
-    """ Tensor dot function. The last dimension of tensor_a and the first dimension of tensor_b must be the same.
-    :param tensor_a:
-    :param tensor_b:
-    :return: the result of tensor_a tensor dot tensor_b.
-    """
-    last_idx_a = len(tensor_a.get_shape().as_list()) - 1
-    return tf.tensordot(tensor_a, tensor_b, [[last_idx_a], [0]])
-
-
-def get_tf_loss_function(loss_name):
-    """ Get tensorflow loss function by loss_name
-    :param loss_name:
-    :return:
-    """
-    return eval(loss_name + '_tf')
 
 
 def get_metric_functions(metric_name_list):
@@ -59,17 +39,6 @@ def get_metrics_callback_from_names(metric_names):
         return res
 
     return metrics
-
-
-def get_num_trainable_params():
-    """ Get the number of trainable parameters in current session (model).
-    :return:
-    """
-    num_params = 0
-    for variable in tf.trainable_variables():
-        shape = variable.get_shape()
-        num_params += reduce(mul, [dim.value for dim in shape], 1)
-    return num_params
 
 
 def set_random_seed(seed=9899):

@@ -9,8 +9,8 @@
 import tensorflow as tf
 from tensorflow.keras import layers
 
-from aehn.models import BaseModel, Attention
-from aehn.lib import tensordot
+from aehn.models import BaseModel
+from aehn.lib import tensordot, Attention
 
 
 class AEHN(BaseModel):
@@ -111,7 +111,7 @@ class AEHN(BaseModel):
         :return: [batch_size, max_len, hidden_dim]
         """
         with tf.variable_scope('intensity_layer', reuse=reuse):
-            attention_layer = Attention(self.hidden_dim)
+            attention_layer = Attention(self.hidden_dim, 'exp_dot')
             delta_layer = layers.Dense(self.hidden_dim, activation=tf.nn.softplus, name='delta_layer')
             mu_layer = layers.Dense(self.hidden_dim, activation=tf.nn.softplus, name='mu_layer')
 
@@ -125,6 +125,7 @@ class AEHN(BaseModel):
             # compute alpha
             # (batch_size, max_len, max_len, 1) (LowerTriangular)
             _, all_attention_weights = attention_layer.compute_attention_weight(x_input,
+                                                                                x_input,
                                                                                 x_input,
                                                                                 pos_mask='self-right')
             # shape -> [batch_size, max_len, max_len, 1]
@@ -258,5 +259,9 @@ class AEHN(BaseModel):
         return tf.nn.softplus(tensordot(imply_lambdas, lambda_w) + lambda_b)
 
     def sample_lambda_by_scan(self, lambda_over_step_scan_fn, scan_elems, scan_shape_var):
-        # TODO
-        pass
+        # TODO check whether the scan_shape_var is necessary
+        lambdas_pred_samples = tf.scan(
+            lambda_over_step_scan_fn,
+            scan_elems,
+            initializer=scan_shape_var)
+
