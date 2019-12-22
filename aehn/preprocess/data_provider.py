@@ -9,8 +9,8 @@
 from abc import abstractmethod
 import numpy as np
 
-from lib.utils import yield2batch_data, get_metrics_callback_from_names
-from lib.scalers import DictScaler, ZeroMaxScaler, VoidScaler
+from aehn.lib import yield2batch_data, get_metrics_callback_from_names
+from aehn.lib import DictScaler, VoidScaler
 
 
 class AbstractDataProvider(object):

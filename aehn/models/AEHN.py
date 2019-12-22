@@ -9,8 +9,8 @@
 import tensorflow as tf
 from tensorflow.keras import layers
 
-from models.base_model import BaseModel, Attention
-from lib.utils import tensordot
+from aehn.models import BaseModel, Attention
+from aehn.lib import tensordot
 
 
 class AEHN(BaseModel):

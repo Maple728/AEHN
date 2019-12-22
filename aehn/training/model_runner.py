@@ -14,9 +14,9 @@ import numpy as np
 import tensorflow as tf
 import yaml
 
-from lib.utils import get_num_trainable_params, make_config_string, create_folder, concat_arrs_of_dict, Timer, get_logger
-from training.lr_scheduler import LRScheduler
-from models import *
+from aehn.lib import get_num_trainable_params, make_config_string, create_folder, concat_arrs_of_dict, Timer, get_logger
+from aehn.training.lr_scheduler import LRScheduler
+from aehn.models import *
 
 
 class ModelRunner(object):

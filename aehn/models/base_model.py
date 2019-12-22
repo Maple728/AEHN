@@ -9,7 +9,6 @@
 from abc import abstractmethod
 import tensorflow as tf
 from tensorflow.keras import layers
-from lib.utils import tensordot
 
 
 class BaseModel(object):

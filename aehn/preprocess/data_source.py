@@ -7,10 +7,9 @@
 @desc:
 """
 import os
-import numpy as np
 import pickle
 
-from lib.utils import create_folder
+from aehn.lib import create_folder
 
 
 class DataSource(object):

@@ -10,9 +10,9 @@ import argparse
 import yaml
 import tensorflow as tf
 
-from training.model_runner import ModelRunner
-from preprocess.data_loader import DataLoader
-from preprocess.data_provider import DataProvider
+from aehn.training.model_runner import ModelRunner
+from aehn.preprocess.data_loader import DataLoader
+from aehn.preprocess.data_provider import DataProvider
 
 
 def main(args):

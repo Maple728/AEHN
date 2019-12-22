@@ -10,7 +10,8 @@
 import pickle
 import numpy as np
 
-from lib.utils import concat_arrs_of_dict
+from aehn.lib.utilities import concat_arrs_of_dict
+
 
 def gen_data_from_self_inhibiting_data():
     train_fname = 'data_selfcorrection/self_inhibiting_training.csv'

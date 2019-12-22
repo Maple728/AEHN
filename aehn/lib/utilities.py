@@ -12,7 +12,7 @@ from operator import mul
 import time
 import logging
 
-from lib.metrics import *
+from aehn.lib.metrics import *
 
 
 def tensordot(tensor_a, tensor_b):
