@@ -121,7 +121,8 @@ class BaseModel(object):
                                                           self.max_time_pred / self.n_pred_integral_sample)
             # [batch_size, max_len, n_pred_sample]
             density_samples = lambdas_total_samples * tf.exp(-integral_samples)
-            self.density = tf.reduce_mean(tf.reduce_sum(density_samples, axis=-1) * self.max_time_pred / self.n_pred_integral_sample)
+            self.density = tf.reduce_mean(
+                tf.reduce_sum(density_samples, axis=-1) * self.max_time_pred / self.n_pred_integral_sample)
             # compute time prediction
             # [batch_size, max_len]
             pred_times = self.trapezium_integral(density_samples * dtimes_pred_samples, dtimes_pred_samples)
