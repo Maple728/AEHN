@@ -31,6 +31,9 @@ class AEHN(BaseModel):
         _, loss, pred_types, pred_time = sess.run([self.train_op, self.loss, self.pred_types, self.pred_time],
                                                   feed_dict=fd)
 
+        density = sess.run([self.density], feed_dict=fd)
+        print(density)
+
         # shape -> [batch_size, max_len - 1]
         preds = {
             'types': pred_types[:, :-1],
@@ -169,7 +172,7 @@ class AEHN(BaseModel):
             target_dtimes = tf.concat([self.dtimes_seq[:, 1:], self.dtimes_seq[:, :1]], axis=-1)
 
             # compute lambdas
-            target_elapses = base_elapses + target_dtimes[:, None, :, None]
+            target_elapses = base_elapses + target_dtimes[:, :, None, None]
             # [batch_size, max_len, process_dim]
             lambdas = self.compute_lambda(mus, alphas, deltas, target_elapses)
 
@@ -183,57 +186,60 @@ class AEHN(BaseModel):
                 alphas_trans = tf.transpose(alphas, perm=[1, 0, 2, 3])[:, :, None]
                 deltas_trans = tf.transpose(deltas, perm=[1, 0, 2, 3])[:, :, None]
                 base_elapses_trans = tf.transpose(base_elapses, perm=[1, 0, 2, 3])[:, :, None]
-                scan_elems = (
-                    mus_trans,
-                    alphas_trans,
-                    deltas_trans,
-                    base_elapses_trans
-                )
 
                 # sample lambdas for loss.
                 dtimes_loss_samples = tf.linspace(start=0.0,
                                                   stop=1.0,
                                                   num=self.n_loss_integral_sample)
-                # [batch_size, n_sample, max_len]
-                dtimes_loss_samples = target_dtimes[:, None, :] * dtimes_loss_samples[None, :, None]
-
+                # [batch_size, max_len, n_sample]
+                dtimes_loss_samples = target_dtimes[:, :, None] * dtimes_loss_samples[None, None, :]
                 # loop over max_len
                 loss_scan_initializer = create_tensor([batch_size, self.n_loss_integral_sample, self.process_dim], 0.0)
 
                 # [batch_size, max_len, n_loss_integral_sample, process_dim]
                 lambdas_loss_samples = self.sample_lambda_by_scan(
-                    self.get_compute_lambda_forward_fn(dtimes_loss_samples[:, :, :, None]),
-                    scan_elems,
+                    self.get_compute_lambda_forward_fn(),
+                    [
+                        mus_trans,
+                        alphas_trans,
+                        deltas_trans,
+                        base_elapses_trans,
+                        swap_axes(dtimes_loss_samples[:, :, :, None, None], 0, 1)
+                    ],
                     loss_scan_initializer
                 )
 
                 # sample lambdas for prediction.
 
-                # [batch_size, n_sample, max_len]
+                # [batch_size, max_len, n_sample]
                 dtimes_pred_samples = tf.linspace(start=0.0,
                                                   stop=self.max_time_pred,
-                                                  num=self.n_pred_integral_sample)[None, :, None]
+                                                  num=self.n_pred_integral_sample)[None, None, :]
                 # use loop to avoid memory explode
                 # loop over max_len
                 pred_scan_initializer = create_tensor([batch_size, self.n_pred_integral_sample, self.process_dim], 0.0)
 
                 # [batch_size, max_len, n_pred_integral_sample, process_dim]
                 lambdas_pred_samples = self.sample_lambda_by_scan(
-                    self.get_compute_lambda_forward_fn(dtimes_pred_samples[:, :, :, None]),
-                    scan_elems,
+                    self.get_compute_lambda_forward_fn(),
+                    [
+                        mus_trans,
+                        alphas_trans,
+                        deltas_trans,
+                        base_elapses_trans,
+                        swap_axes(dtimes_pred_samples[:, :, :, None, None], 0, 1)
+                    ],
                     pred_scan_initializer
                 )
-
-                return lambdas, lambdas_loss_samples, tf.transpose(dtimes_loss_samples, perm=[0, 2, 1]), \
-                       lambdas_pred_samples, tf.transpose(dtimes_pred_samples, perm=[0, 2, 1])
+                return lambdas, lambdas_loss_samples, dtimes_loss_samples, lambdas_pred_samples, dtimes_pred_samples
             else:
                 return lambdas, None, None, None, None
 
-    def get_compute_lambda_forward_fn(self, elapse_bias):
+    def get_compute_lambda_forward_fn(self, ):
         compute_lambda_fn = self.compute_lambda
 
         def forward_fn(acc, item):
-            mu, alpha, delta, elapse = item
+            mu, alpha, delta, elapse, elapse_bias = item
             return compute_lambda_fn(mu, alpha, delta, elapse + elapse_bias)
 
         return forward_fn
@@ -262,6 +268,7 @@ class AEHN(BaseModel):
         right_term = tf.reduce_sum(alpha * tf.exp(-delta * elapse), axis=-2)
         # shape -> [..., hidden_dim]
         imply_lambdas = left_term + right_term
+        # imply_lambdas = right_term
 
         return tf.nn.softplus(tensordot(imply_lambdas, lambda_w) + lambda_b)
 

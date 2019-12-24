@@ -19,13 +19,13 @@ model:
 
   # following three setting are activated when using loglikelihood
   n_loss_integral_sample: 50
-  n_pred_integral_sample: 2
+  n_pred_integral_sample: 50
   max_time_pred: 2.0
 
 
 train:
   dropout_rate: 0.0
-  lr: 0.001
+  lr: 0.005
   epoch: 0
   max_epoch: 500
   lr_scheduler: PlateauLRScheduler

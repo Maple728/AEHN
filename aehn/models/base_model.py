@@ -74,36 +74,6 @@ class BaseModel(object):
 
         return pred_type_logits, pred_time
 
-    def loglikelihood_inference(self, lambdas_pred_samples, dtimes_pred_samples):
-        """ Predict the type and time from intensity function over infinite time.
-        :param lambdas_pred_samples: [batch_size, max_len, n_pred_sample, process_dim]
-        :param dtimes_pred_samples: [batch_size, max_len, n_pred_sample]
-        :return:
-        """
-        with tf.variable_scope('intensity_inference'):
-            # compute density
-            # [batch_size, max_len, n_pred_sample]
-            lambdas_total_samples = tf.reduce_sum(lambdas_pred_samples, axis=-1)
-            # [batch_size, max_len, n_pred_sample]
-            integral_samples = self.get_acc_rect_integral(lambdas_total_samples,
-                                                          self.max_time_pred / self.n_pred_integral_sample)
-            # [batch_size, max_len, n_pred_sample]
-            density_samples = lambdas_total_samples * tf.exp(-integral_samples)
-
-            # compute time prediction
-            # [batch_size, max_len]
-            pred_times = self.trapezium_integral(density_samples * dtimes_pred_samples, dtimes_pred_samples)
-
-            # compute type prediction
-            # [batch_size, max_len, n_pred_sample, process_dim]
-            type_ratio_samples = lambdas_pred_samples / lambdas_total_samples[:, :, :, None]
-
-            # [batch_size, max_len, process_dim]
-            pred_type_logits = self.trapezium_integral(type_ratio_samples * density_samples[:, :, :, None],
-                                                       dtimes_pred_samples[:, :, :, None])
-
-        return pred_type_logits, pred_times
-
     def shuffle_hybrid_loss(self, pred_type_logits, pred_times):
         """ Calculate the total loss of all points in the sequence by using the latter point as the label predicted by
         the previous point.
@@ -125,7 +95,7 @@ class BaseModel(object):
             pred_type_proba = tf.nn.softmax(pred_type_logits, axis=-1) + 1e-8
 
             # (batch_size, max_len - 1)
-            cross_entropy = tf.reduce_sum(- tf.log(pred_type_proba) * type_label, axis=-1)
+            cross_entropy = tf.reduce_sum(-tf.log(pred_type_proba) * type_label, axis=-1)
             type_loss = tf.reduce_mean(tf.boolean_mask(cross_entropy, seq_mask))
 
             dtimes_pred = pred_times[:, :-1]
@@ -135,6 +105,36 @@ class BaseModel(object):
             time_loss = tf.reduce_mean(tf.abs(time_diff))
 
             return type_loss + time_loss
+
+    def loglikelihood_inference(self, lambdas_pred_samples, dtimes_pred_samples):
+        """ Predict the type and time from intensity function over infinite time.
+        :param lambdas_pred_samples: [batch_size, max_len, n_pred_sample, process_dim]
+        :param dtimes_pred_samples: [batch_size, max_len, n_pred_sample]
+        :return:
+        """
+        with tf.variable_scope('intensity_inference'):
+            # compute density
+            # [batch_size, max_len, n_pred_sample]
+            lambdas_total_samples = tf.reduce_sum(lambdas_pred_samples, axis=-1)
+            # [batch_size, max_len, n_pred_sample]
+            integral_samples = self.get_acc_rect_integral(lambdas_total_samples,
+                                                          self.max_time_pred / self.n_pred_integral_sample)
+            # [batch_size, max_len, n_pred_sample]
+            density_samples = lambdas_total_samples * tf.exp(-integral_samples)
+            self.density = tf.reduce_mean(tf.reduce_sum(density_samples, axis=-1) * self.max_time_pred / self.n_pred_integral_sample)
+            # compute time prediction
+            # [batch_size, max_len]
+            pred_times = self.trapezium_integral(density_samples * dtimes_pred_samples, dtimes_pred_samples)
+
+            # compute type prediction
+            # [batch_size, max_len, n_pred_sample, process_dim]
+            type_ratio_samples = lambdas_pred_samples / lambdas_total_samples[:, :, :, None]
+
+            # [batch_size, max_len, process_dim]
+            pred_type_logits = self.trapezium_integral(type_ratio_samples * density_samples[:, :, :, None],
+                                                       dtimes_pred_samples[:, :, :, None])
+
+        return pred_type_logits, pred_times
 
     def shuffle_loglikelihood_loss(self, lambdas, lambdas_loss_samples, dtimes_loss_samples):
         """
@@ -165,7 +165,7 @@ class BaseModel(object):
 
             # shape -> [batch_size, max_len - 1]
             target_lambdas = tf.reduce_sum(lambdas * seq_event_onehot, axis=-1)
-            target_lambdas_masked = tf.boolean_mask(target_lambdas, target_lambdas > 0)
+            target_lambdas_masked = tf.boolean_mask(target_lambdas, seq_zero_mask > 0)
             term_1 = tf.reduce_sum(tf.log(target_lambdas_masked))
 
             # shape -> [batch_size, max_len - 1]
@@ -187,7 +187,7 @@ class BaseModel(object):
         return integral
 
     def trapezium_integral(self, values, dtimes):
-        """ Trapezium integral over dim-1 (samples dim).
+        """ Trapezium integral over dim-2 (samples dim).
         :param values: [batch_size, None, n_samples, ...]
         :param dtimes: the shape is same as values  or float
         :return: [batch_size, None, ...]
