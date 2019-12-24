@@ -25,8 +25,8 @@ model:
 
 train:
   dropout_rate: 0.0
-  lr: 0.005
+  lr: 0.01
   epoch: 0
   max_epoch: 500
   lr_scheduler: PlateauLRScheduler
-  patience: 15
+  patience: 10

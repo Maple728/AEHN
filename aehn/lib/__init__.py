@@ -12,6 +12,8 @@ from aehn.lib.scalers import DictScaler
 from aehn.lib.scalers import StandZeroMaxScaler
 
 from aehn.lib.tf_utils import tensordot
+from aehn.lib.tf_utils import swap_axes
+from aehn.lib.tf_utils import create_tensor
 from aehn.lib.tf_utils import get_num_trainable_params
 from aehn.lib.tf_utils import get_tf_loss_function
 from aehn.lib.tf_utils import Attention
@@ -40,6 +42,8 @@ __all__ = ['shuffle_label_hybrid_loss_tf',
            'VoidScaler',
 
            'tensordot',
+           'swap_axes',
+           'create_tensor',
            'get_tf_loss_function',
            'get_num_trainable_params',
            'Attention',

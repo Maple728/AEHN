@@ -25,6 +25,30 @@ def tensordot(tensor_a, tensor_b):
     return tf.tensordot(tensor_a, tensor_b, [[last_idx_a], [0]])
 
 
+def swap_axes(tensor, axis1, axis2):
+    """Interchange two axes of an tensor.
+    :param tensor:
+    :param axis1: First axis.
+    :param axis2: Second axis.
+    :return:
+    """
+    tensor_perm = list(range(len(tensor.shape.as_list())))
+    tensor_perm[axis1] = axis2
+    tensor_perm[axis2] = axis1
+
+    return tf.transpose(tensor, perm=tensor_perm)
+
+
+def create_tensor(shape, value):
+    """Creates a tensor with all elements set to value and dtype is same sa value.
+    :param shape: a list
+    :param value: a number
+    :return:
+    """
+    tensor_shape = tf.stack(shape)
+    return tf.fill(tensor_shape, value)
+
+
 def gett_variable_weights(name, shape, collections=None):
     return tf.get_variable(name, shape=shape, dtype=FLOAT_TYPE,
                            initializer=tf.glorot_normal_initializer(),
