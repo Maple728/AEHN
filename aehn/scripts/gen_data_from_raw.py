@@ -85,7 +85,6 @@ def gen_data_from_retweet_or_so():
 
 if __name__ == '__main__':
     # gen_data_from_synthetic_data('data_poisson', 'poisson')
-    # gen_data_from_synthetic_data('data_exp_hawkes', 'exponential_hawkes')
-    # gen_data_from_synthetic_data('data_pl_hawkes', 'powerlaw_hawkes')
+    # gen_data_from_synthetic_data('data_exphawkes', 'exponential_hawkes')
+    # gen_data_from_synthetic_data('data_powerlaw_hawkes', 'powerlaw_hawkes')
     gen_data_from_synthetic_data('data_selfcorrection', 'self_inhibiting')
-
