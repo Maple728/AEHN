@@ -41,12 +41,26 @@ def make_2d_hawkes():
 
     event_timestamps, event_types = list(zip(*timestamps))
 
+    print('length of timestamps {}'.format(len(event_timestamps[0])))
+
     res = dict()
     res['timestamps'] = event_timestamps
     res['types'] = event_types
 
     return res
 
+
+def make_1d_hawkes():
+    from tick import hawkes
+    tmax = 180
+    hawkes_1d = hawkes.SimuHawkes(n_nodes=1, end_time=tmax, verbose=False)
+    kernel = hawkes.SimuHawkesExpKernels(adjacency=0.5,
+                                         decays=1.6,
+                                         baseline=[0.5])
+
+    hawkes_1d.simulate()
+
+    return
 
 def make_3d_hawkes():
     from tick import hawkes
@@ -85,7 +99,7 @@ def make_3d_hawkes():
     return res
 
 
-def make_syn_dataset(dim=3):
+def make_syn_dataset(dim=2):
     if dim == 2:
         data = make_2d_hawkes()
     else:
@@ -122,4 +136,4 @@ def make_syn_dataset(dim=3):
 
 
 if __name__ == '__main__':
-    make_syn_dataset()
+    make_syn_dataset(dim=2)

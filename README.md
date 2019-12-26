@@ -12,6 +12,8 @@ pip install -r requirements.txt
 ```
 
 ## Datasets
+
+### Real world dataset
 All datasets can be downloaded from [BaiduDisk](https://pan.baidu.com/s/1H6mfLB1MErHuh6gDrs88sw).
 
 1. Retweet (retweet)
@@ -19,6 +21,19 @@ All datasets can be downloaded from [BaiduDisk](https://pan.baidu.com/s/1H6mfLB1
 
 2. StackOverflow (so)
  - num of event: 22
+
+### Synthetic dataset
+
+- [2d Exp Hawkes](https://pan.baidu.com/s/1x75plmF_DYogY3IvN_gImQ)
+- [3d Exp Hawkes]()
+
+
+
+
+|  | 2d Exp Hawkes  |  3d Exp Hawkes | comment |
+|--|---|---|---|
+| NHP  |    |                | 100 epoch |
+| AEHN  |           |         |100 epoch, step=10 |
 
 
 ## Model Training
