@@ -22,17 +22,17 @@ def main(args):
         data_config = config['data']
         model_config = config['model']
 
-        # load data
-        # get data source
-        data_loader = DataLoader(**data_config, **model_config)
-        _, _, test_ds = data_loader.get_three_datasource()
-        # get three data provider for model input
-        test_dp = DataProvider(test_ds, **data_config, **model_config)
+    # load data
+    # get data source
+    data_loader = DataLoader(**data_config, **model_config)
+    _, _, test_ds = data_loader.get_three_datasource()
+    # get three data provider for model input
+    test_dp = DataProvider(test_ds, **data_config, **model_config)
 
-        with tf.Session() as sess:
-            model_runner = ModelRunner(config)
-            preds, labels, metrics = model_runner.evaluate_model(sess, test_dp)
-            print(metrics)
+    with tf.Session() as sess:
+        model_runner = ModelRunner(config)
+        preds, labels, metrics = model_runner.evaluate_model(sess, test_dp)
+        print(metrics)
 
 
 if __name__ == '__main__':

@@ -18,8 +18,8 @@ model:
   pred_method: loglikelihood
 
   # following three setting are activated when using loglikelihood
-  n_loss_integral_sample: 40
-  n_pred_integral_sample: 100
+  n_loss_integral_sample: 10
+  n_pred_integral_sample: 10
   max_time_pred: 12.0
 
 
