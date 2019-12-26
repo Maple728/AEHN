@@ -121,18 +121,19 @@ class BaseModel(object):
                                                           self.max_time_pred / self.n_pred_integral_sample)
             # [batch_size, max_len, n_pred_sample]
             density_samples = lambdas_total_samples * tf.exp(-integral_samples)
-            self.density = tf.reduce_mean(tf.reduce_sum(density_samples, axis=-1) * self.max_time_pred / self.n_pred_integral_sample)
+            self.density = tf.reduce_mean(
+                tf.reduce_sum(density_samples, axis=-1) * self.max_time_pred / self.n_pred_integral_sample)
             # compute time prediction
             # [batch_size, max_len]
-            pred_times = self.trapezium_integral(density_samples * dtimes_pred_samples, dtimes_pred_samples)
+            pred_times = self.sample_integral(density_samples * dtimes_pred_samples, dtimes_pred_samples)
 
             # compute type prediction
             # [batch_size, max_len, n_pred_sample, process_dim]
             type_ratio_samples = lambdas_pred_samples / lambdas_total_samples[:, :, :, None]
 
             # [batch_size, max_len, process_dim]
-            pred_type_logits = self.trapezium_integral(type_ratio_samples * density_samples[:, :, :, None],
-                                                       dtimes_pred_samples[:, :, :, None])
+            pred_type_logits = self.sample_integral(type_ratio_samples * density_samples[:, :, :, None],
+                                                    dtimes_pred_samples[:, :, :, None])
 
         return pred_type_logits, pred_times
 
@@ -169,7 +170,7 @@ class BaseModel(object):
             term_1 = tf.reduce_sum(tf.log(target_lambdas_masked))
 
             # shape -> [batch_size, max_len - 1]
-            lambdas_integral = self.trapezium_integral(lambdas_total_samples, dtimes_loss_samples)
+            lambdas_integral = self.sample_integral(lambdas_total_samples, dtimes_loss_samples)
             term_2 = tf.reduce_sum(seq_zero_mask * lambdas_integral)
 
             events_loss = - (term_1 - term_2)
@@ -186,8 +187,16 @@ class BaseModel(object):
         integral = tf.cumsum(values * interval, axis=2)
         return integral
 
+    def sample_integral(self, values, dtimes):
+        """ Integral over samples dimension (dim-2).
+        :param values: [batch_size, None, n_samples, ...]
+        :param dtimes: the shape is same as values  or float
+        :return: [batch_size, None, ...]
+        """
+        return self.monte_carlo_integral(values, dtimes)
+
     def trapezium_integral(self, values, dtimes):
-        """ Trapezium integral over dim-2 (samples dim).
+        """ Trapezium integral.
         :param values: [batch_size, None, n_samples, ...]
         :param dtimes: the shape is same as values  or float
         :return: [batch_size, None, ...]
@@ -198,6 +207,20 @@ class BaseModel(object):
             heights = dtimes[:, :, 1:] - dtimes[:, :, :-1]
         upper_bottom = values[:, :, 1:] + values[:, :, :-1]
         integral = tf.reduce_sum(0.5 * heights * upper_bottom, axis=2)
+        return integral
+
+    def monte_carlo_integral(self, values, dtimes):
+        """ Monte calor integral.
+        :param values: [batch_size, len, n_samples]
+        :param dtimes: [batch_size, len, n_samples]
+        :return: [batch_size, len]
+        """
+        n_samples = tf.cast(tf.shape(dtimes)[2], tf.float32)
+        # [batch_size, len]
+        max_t = dtimes[:, :, -1]
+
+        # [batch_size, len]
+        integral = tf.reduce_sum(values, axis=2) * max_t / n_samples
         return integral
 
 

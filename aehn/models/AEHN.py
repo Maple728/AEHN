@@ -31,8 +31,8 @@ class AEHN(BaseModel):
         _, loss, pred_types, pred_time = sess.run([self.train_op, self.loss, self.pred_types, self.pred_time],
                                                   feed_dict=fd)
 
-        density = sess.run([self.density], feed_dict=fd)
-        print(density)
+        # density = sess.run([self.density], feed_dict=fd)
+        # print(density)
 
         # shape -> [batch_size, max_len - 1]
         preds = {
