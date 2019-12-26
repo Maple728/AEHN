@@ -25,15 +25,15 @@ All datasets can be downloaded from [BaiduDisk](https://pan.baidu.com/s/1H6mfLB1
 ### Synthetic dataset
 
 - [2d Exp Hawkes](https://pan.baidu.com/s/1x75plmF_DYogY3IvN_gImQ)
-- [3d Exp Hawkes]()
+- [3d Exp Hawkes](https://pan.baidu.com/s/1PgmZEY5ICFYXMpUKXj-k3Q)
 
 
-
+#### Loglike-per-event
 
 |  | 2d Exp Hawkes  |  3d Exp Hawkes | comment |
 |--|---|---|---|
-| NHP  |    |                | 100 epoch |
-| AEHN  |           |         |100 epoch, step=10 |
+| NHP  |  -2.277  |                | 200 epoch |
+| AEHN  |  -2.170         |         |30 epoch, step=10 |
 
 
 ## Model Training
