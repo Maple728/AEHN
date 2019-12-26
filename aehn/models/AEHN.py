@@ -76,13 +76,13 @@ class AEHN(BaseModel):
             type_seq_emb = self.embedding_layer(self.types_seq)
 
             # Flow layer
-            # flow_output = self.flow_layer(type_seq_emb)
+            flow_output = self.flow_layer(type_seq_emb)
 
             # 2. Intensity layer
             # shape -> [batch_size, max_len, process_dim]
             lambdas, \
             lambdas_loss_samples, dtimes_loss_samples, \
-            lambdas_pred_samples, dtimes_pred_samples = self.intensity_layer(type_seq_emb)
+            lambdas_pred_samples, dtimes_pred_samples = self.intensity_layer(flow_output)
 
             # 3. Inference layer and loss function
             # [batch_size, max_len, process_dim], [batch_size, max_len]

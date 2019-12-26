@@ -14,6 +14,11 @@ from aehn.training.model_runner import ModelRunner
 from aehn.preprocess.data_loader import DataLoader
 from aehn.preprocess.data_provider import DataProvider
 
+# GPU setting
+# import os
+# os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
+# os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+
 
 def main(args):
     config_filename = args.config_filename
@@ -21,20 +26,20 @@ def main(args):
         config = yaml.load(config_file)
         data_config = config['data']
 
-        # load data
-        # get data source
-        data_loader = DataLoader(data_config)
-        train_ds, valid_ds, test_ds = data_loader.get_three_datasource()
-        # get three data provider for model input
-        train_dp = DataProvider(train_ds, data_config)
-        valid_dp = DataProvider(valid_ds, data_config)
-        test_dp = DataProvider(test_ds, data_config)
+    # load data
+    # get data source
+    data_loader = DataLoader(data_config)
+    train_ds, valid_ds, test_ds = data_loader.get_three_datasource()
+    # get three data provider for model input
+    train_dp = DataProvider(train_ds, data_config)
+    valid_dp = DataProvider(valid_ds, data_config)
+    test_dp = DataProvider(test_ds, data_config)
 
-        with tf.Session() as sess:
-            model_runner = ModelRunner(config)
-            model_runner.train_model(sess, train_dp, valid_dp, test_dp)
-            preds, labels, metrics = model_runner.evaluate_model(sess, test_dp)
-            print(metrics)
+    with tf.Session() as sess:
+        model_runner = ModelRunner(config)
+        model_runner.train_model(sess, train_dp, valid_dp, test_dp)
+        preds, labels, metrics = model_runner.evaluate_model(sess, test_dp)
+        print(metrics)
 
 
 if __name__ == '__main__':
