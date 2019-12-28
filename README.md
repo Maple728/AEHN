@@ -31,12 +31,12 @@ All datasets can be downloaded from [BaiduDisk](https://pan.baidu.com/s/1H6mfLB1
 
 #### Loglike-per-event
 
-|  |1d Hawkes |2d Hawkes  |  3d Hawkes | comment |
-|--| --| ---|---|---|
-| NJSDE|  |    |   |   epoch 500  |
-| RMTPP|  | -2.246  | -1.398  | 200 epoch, 窗口50  |
-| NHP |   -0.853|  -2.277  |       -1.377         | 200 epoch |
-| AEHN | -0.690(80 epoch) |  -2.170 (30 epoch)        |     -1.317 (50 epoch)    |100 epoch, step=10 |
+|  |1d Hawkes |2d Hawkes  |  3d Hawkes |10d Hawkes | comment |
+|--| --| ---|---|---| ---|
+| NJSDE|  |    |   |  | epoch 500  |
+| RMTPP|  | -2.246  | -1.398 |  | 200 epoch, 窗口50  |
+| NHP |   -0.853|  -2.277  |  -1.377    |     | 200 epoch |
+| AEHN | -0.690(80 epoch) |  -2.170 (30 epoch)   | -1.317 (50 epoch) |   | step=10 |
 
 
 ## Model Training
