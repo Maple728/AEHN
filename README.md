@@ -23,19 +23,20 @@ All datasets can be downloaded from [BaiduDisk](https://pan.baidu.com/s/1H6mfLB1
  - num of event: 22
 
 ### Synthetic dataset
-
+- [1d Exp Hawkes](https://pan.baidu.com/s/1IyummK-4ZbCsXjAPAQw6Ig)
 - [2d Exp Hawkes](https://pan.baidu.com/s/1x75plmF_DYogY3IvN_gImQ)
 - [3d Exp Hawkes](https://pan.baidu.com/s/1PgmZEY5ICFYXMpUKXj-k3Q)
 - [5d Exp Hawkes](https://pan.baidu.com/s/1HX513dGqkk6EnrtaQSZdcQ)
+- [10d Exp Hawkes](https://pan.baidu.com/s/1_Jc50wriOYsgMhcQ1QcR3g)
 
 #### Loglike-per-event
 
-|  | 2d Exp Hawkes  |  3d Exp Hawkes | comment |
-|--|  ---|---|---|
-| NJSDE|  -2.536  |   |   epoch 100  |
-| RMTPP  | -2.246  | -1.398  | 200 epoch, 窗口50  |
-| NHP  |  -2.277  |       -1.377         | 200 epoch |
-| AEHN  |  -2.170         |     -1.317    |30 epoch(50 epoch), step=10 |
+|  |1d Hawkes |2d Hawkes  |  3d Hawkes | comment |
+|--| --| ---|---|---|
+| NJSDE|  |    |   |   epoch 500  |
+| RMTPP|  | -2.246  | -1.398  | 200 epoch, 窗口50  |
+| NHP |   -0.853|  -2.277  |       -1.377         | 200 epoch |
+| AEHN | -0.690(80 epoch) |  -2.170 (30 epoch)        |     -1.317 (50 epoch)    |100 epoch, step=10 |
 
 
 ## Model Training
