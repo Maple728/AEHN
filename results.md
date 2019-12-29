@@ -37,9 +37,9 @@ On simullar datasets:
 - [10d Exp Hawkes](https://pan.baidu.com/s/1YAGBwecVOkR_GC0mJ6NY3g)
 - [20d Exp Hawkes](https://pan.baidu.com/s/1yPN9cVr23yCxbvE2XSanww)
 
-|  |1d Hawkes |2d Hawkes  |  3d Hawkes |10d Hawkes | comment |
+|  |1d Hawkes |2d Hawkes  |  3d Hawkes |10d Hawkes |20d Hawkes| comment |
 |--| --| ---|---|---| ---|
 | NJSDE|  |    |  -1.422 |  | epoch 500  |
-| RMTPP| -0.961 | -2.246  | -1.398 | -1.550 | 200 epoch, 窗口50  |
-| NHP |   -0.853|  -2.277  |  -1.377    | -1.505    | 200 epoch |
-| AEHN | -0.690(80 epoch) |  -2.135   | -1.255 | -1.496 (90 epoch) | 1000 epoch, step=10 |
+| RMTPP| -0.961 | -2.246  | -1.398 | -1.550 | | 200 epoch, 窗口50  |
+| NHP |   -0.853|  -2.277  |  -1.377    | -1.505   | -1.182 | 200 epoch |
+| AEHN | -0.690(80 epoch) |  -2.135   | -1.255 | -1.496 (90 epoch)| | 1000 epoch, step=10 |
