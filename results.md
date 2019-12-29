@@ -35,6 +35,7 @@ On simullar datasets:
 - [3d Exp Hawkes](https://pan.baidu.com/s/1PgmZEY5ICFYXMpUKXj-k3Q)
 - [5d Exp Hawkes](https://pan.baidu.com/s/1HX513dGqkk6EnrtaQSZdcQ)
 - [10d Exp Hawkes](https://pan.baidu.com/s/1YAGBwecVOkR_GC0mJ6NY3g)
+- [20d Exp Hawkes](https://pan.baidu.com/s/1yPN9cVr23yCxbvE2XSanww)
 
 |  |1d Hawkes |2d Hawkes  |  3d Hawkes |10d Hawkes | comment |
 |--| --| ---|---|---| ---|
