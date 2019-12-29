@@ -50,15 +50,18 @@ def set_random_seed(seed=9899):
     tf.set_random_seed(seed)
 
 
-def make_config_string(config, key_len=4):
+def make_config_string(config, key_len=4, max_num_key=4):
     """ Generate a name for config.
     :param config:
     :param key_len: the length of printed key
     :return:
     """
     str_config = ''
+    num_key = 0
     for k, v in config.items():
-        str_config += '[' + k[:key_len] + '-' + str(v) + ']'
+        if num_key < max_num_key:
+            str_config += '[' + k[:key_len] + '-' + str(v) + ']'
+            num_key += 1
     return str_config
 
 
