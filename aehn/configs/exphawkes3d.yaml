@@ -1,0 +1,32 @@
+base_dir: logs
+data:
+  batch_size: 16
+  data_name: exphawkes3d
+  data_filename: data/data_exphawkes3d/{}.pkl
+  process_dim: 3
+  use_cache: False
+  cache_dir: cache
+  # list of the names of the metrics.
+  metrics: [type_acc, time_rmse]
+
+model:
+  name: AEHN
+  # the number of events
+  process_dim: 3
+  hidden_dim: 16
+  # hybrid or loglikelihood
+  pred_method: loglikelihood
+
+  # following three setting are activated when using loglikelihood
+  n_loss_integral_sample: 10
+  n_pred_integral_sample: 80
+  max_time_pred: 2.0
+
+
+train:
+  dropout_rate: 0.0
+  lr: 0.01
+  epoch: 0
+  max_epoch: 1000
+  lr_scheduler: PlateauLRScheduler
+  patience: 10

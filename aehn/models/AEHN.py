@@ -15,7 +15,7 @@ from aehn.lib import tensordot, swap_axes, create_tensor, Attention
 
 class AEHN(BaseModel):
     """
-    AEHN with various length of input.
+    AEHN with various length of input, and compute delta just by hidden states.
     """
 
     def train(self, sess, batch_data, **kwargs):
@@ -146,9 +146,9 @@ class AEHN(BaseModel):
                                                                                 x_input,
                                                                                 x_input,
                                                                                 pos_mask='right')
-            # shape -> [batch_size, max_len, max_len, 1]
-            alphas = all_attention_weights
-            # alphas = all_attention_weights * x_input[:, None]
+            # shape -> [batch_size, max_len, max_len, 1 | hidden_dim]
+            # alphas = all_attention_weights
+            alphas = all_attention_weights * x_input[:, None]
 
             # compute delta
             # shape -> [batch_size, max_len, max_len, hidden_dim]
@@ -235,7 +235,7 @@ class AEHN(BaseModel):
             else:
                 return lambdas, None, None, None, None
 
-    def get_compute_lambda_forward_fn(self, ):
+    def get_compute_lambda_forward_fn(self):
         compute_lambda_fn = self.compute_lambda
 
         def forward_fn(acc, item):
@@ -268,7 +268,6 @@ class AEHN(BaseModel):
         right_term = tf.reduce_sum(alpha * tf.exp(-delta * elapse), axis=-2)
         # shape -> [..., hidden_dim]
         imply_lambdas = left_term + right_term
-        # imply_lambdas = right_term
 
         return tf.nn.softplus(tensordot(imply_lambdas, lambda_w) + lambda_b)
 
