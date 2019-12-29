@@ -41,4 +41,4 @@ On simullar datasets:
 | NJSDE|  |    |  -1.422 |  | epoch 500  |
 | RMTPP| -0.961 | -2.246  | -1.398 | -1.550 | 200 epoch, 窗口50  |
 | NHP |   -0.853|  -2.277  |  -1.377    | -1.505    | 200 epoch |
-| AEHN | -0.690(80 epoch) |  -2.142 (200 epoch)   | -1.317 (200 epoch) | -1.496 (90 epoch) | 100 epoch, step=10 |
+| AEHN | -0.690(80 epoch) |  -2.135   | -1.255 | -1.496 (90 epoch) | 1000 epoch, step=10 |
