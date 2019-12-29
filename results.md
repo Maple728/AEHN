@@ -27,3 +27,18 @@ On simullar datasets:
 | TF-NHP | -0.815 | -0.2499 | -1.176 | -0.006| xx | xx |
 | AEHN_simple | xx | -0.656 | -1.616 | -0.086 | -2.135 | -1.255 |
 
+
+### Simulated Hawkes data
+
+- [1d Exp Hawkes](https://pan.baidu.com/s/1IyummK-4ZbCsXjAPAQw6Ig)
+- [2d Exp Hawkes](https://pan.baidu.com/s/1x75plmF_DYogY3IvN_gImQ)
+- [3d Exp Hawkes](https://pan.baidu.com/s/1PgmZEY5ICFYXMpUKXj-k3Q)
+- [5d Exp Hawkes](https://pan.baidu.com/s/1HX513dGqkk6EnrtaQSZdcQ)
+- [10d Exp Hawkes](https://pan.baidu.com/s/1YAGBwecVOkR_GC0mJ6NY3g)
+
+|  |1d Hawkes |2d Hawkes  |  3d Hawkes |10d Hawkes | comment |
+|--| --| ---|---|---| ---|
+| NJSDE|  |    |  -1.422 |  | epoch 500  |
+| RMTPP| -0.961 | -2.246  | -1.398 | -1.550 | 200 epoch, 窗口50  |
+| NHP |   -0.853|  -2.277  |  -1.377    | -1.505    | 200 epoch |
+| AEHN | -0.690(80 epoch) |  -2.142 (200 epoch)   | -1.317 (200 epoch) | -1.496 (90 epoch) | 100 epoch, step=10 |
