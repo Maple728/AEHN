@@ -6,12 +6,15 @@
 ### Retweet
 | Model | method | type_acc | time_rmse |
 | :----:| :-----: | :------: | :-------: |
+|  RMTPP | 窗口20  | 49.80%   | 288.75   |
+|  RMTPP | 窗口50  | 54.00%   | 309.92   |
 | AEHN_simple |	hybrid|  59.91% | 274.64 |
 
 
 ### Stack Overflow (so)
 | Model | method | type_acc | time_rmse |
 | :----:| :-----: | :------: | :-------: |
+|  RMTPP | 窗口50  | 44.31%   | 0.71   |
 | AEHN_simple |   hybrid  | 45.85%   |   0.64    |
 
 
