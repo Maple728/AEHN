@@ -14,6 +14,7 @@
 ### Stack Overflow (so)
 | Model | method | type_acc | time_rmse |
 | :----:| :-----: | :------: | :-------: |
+|  RMTPP | 窗口20  | 43.10%   | 0.73   |
 |  RMTPP | 窗口50  | 44.31%   | 0.71   |
 | AEHN_simple |   hybrid  | 45.85%   |   0.64    |
 
