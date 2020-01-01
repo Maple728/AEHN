@@ -23,7 +23,7 @@
 ## Loglikelihood-per-event
 On simullar datasets:
 
-| Model | Poisson | Hawkes-Exp | Hawkes-PL | Self-correlation | 2d Hawkes-Exp | 3d Hawkes-Exp
+| Model | Poisson | Hawkes-Exp | Hawkes-PL | Self-correlation | 2d Hawkes-Exp | 3d Hawkes-Exp|
 | :--------: | :----------: | :--------: | :----------: | :--------: | :----------: | :--------: |
 | Jump-Neural-SDE | -1.016 | -0.489 | -1.565 | -0.128 | xx | xx |
 | Mei-NHP | -0.957 | -0.399 | -1.411 | -0.068| -2.287 | -1.377 |
@@ -49,4 +49,4 @@ On simullar datasets:
 | NJSDE|  -0.881|-2.324    |  -1.422 | -1.521 | | epoch 500  |
 | RMTPP| -0.935 | -2.325  | -1.459 | -1.542 | -1.388 | 500 epoch, 窗口50  |
 | NHP |   -0.847|  -2.262  |  -1.373    | -1.487   | -1.180 | 500 epoch |
-| AEHN | -0.690(80 epoch) |  -2.135   | -1.255 | -1.496 (90 epoch)| | 1000 epoch, step=10 |
+| AEHN | -0.690(80 epoch) |  -2.135   | -1.255 | -1.495 | -1.157 | 1000 epoch, step=10 |
