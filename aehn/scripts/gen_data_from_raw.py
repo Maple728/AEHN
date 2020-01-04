@@ -83,8 +83,61 @@ def gen_data_from_retweet_or_so():
         pickle.dump(test_data, file)
 
 
+def gen_data_from_order_book(n_points_per_record=32):
+    fpath = 'amazon.csv'
+    csv_data = np.loadtxt(fpath, delimiter=',', skiprows=1)
+
+    def split_records(record, n_points):
+        res = []
+        n_records = len(record)
+
+        for i in range(0, n_records, n_points):
+            res.append(record[i: i + n_points])
+
+        return res
+
+    data = {
+        'types': split_records(csv_data[:, 2], n_points_per_record),
+        'timestamps': split_records(csv_data[:, 1], n_points_per_record),
+        'marks': split_records(csv_data[:, 3], n_points_per_record)
+    }
+
+    n_records = len(data['types'])
+    train_idx = int(0.6 * n_records)
+    valid_idx = int(0.8 * n_records)
+
+    print(train_idx, valid_idx, n_records)
+    train_data = {
+        'types': data['types'][:train_idx],
+        'timestamps': data['timestamps'][:train_idx],
+        'marks': data['marks'][:train_idx]
+    }
+
+    valid_data = {
+        'types': data['types'][train_idx:valid_idx],
+        'timestamps': data['timestamps'][train_idx:valid_idx],
+        'marks': data['marks'][train_idx:valid_idx]
+    }
+
+    test_data = {
+        'types': data['types'][valid_idx:],
+        'timestamps': data['timestamps'][valid_idx:],
+        'marks': data['marks'][valid_idx:]
+    }
+
+    with open('train' + '.pkl', 'wb') as file:
+        pickle.dump(train_data, file)
+
+    with open('valid' + '.pkl', 'wb') as file:
+        pickle.dump(valid_data, file)
+
+    with open('test' + '.pkl', 'wb') as file:
+        pickle.dump(test_data, file)
+
+
 if __name__ == '__main__':
     # gen_data_from_synthetic_data('data_poisson', 'poisson')
     # gen_data_from_synthetic_data('data_exphawkes', 'exponential_hawkes')
     # gen_data_from_synthetic_data('data_powerlaw_hawkes', 'powerlaw_hawkes')
-    gen_data_from_synthetic_data('data_selfcorrection', 'self_inhibiting')
+    # gen_data_from_synthetic_data('data_selfcorrection', 'self_inhibiting')
+    gen_data_from_order_book()
