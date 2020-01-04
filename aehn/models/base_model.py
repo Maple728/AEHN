@@ -81,7 +81,7 @@ class BaseModel(object):
         :param pred_times: [batch_size, max_len]
         :return:
         """
-        label_types = self.types_seq
+        label_types = self.types_seq_one_hot
         label_times = self.dtimes_seq
         seq_mask = self.seq_mask
         with tf.variable_scope('shuffle_hybrid_loss'):

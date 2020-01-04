@@ -10,7 +10,7 @@ from abc import abstractmethod
 import numpy as np
 
 from aehn.lib import yield2batch_data, get_metrics_callback_from_names
-from aehn.lib import DictScaler, VoidScaler
+from aehn.lib import DictScaler, VoidScaler, ZeroMaxScaler, StandZeroMaxScaler
 
 
 class AbstractDataProvider(object):
@@ -54,6 +54,9 @@ class DataProvider(AbstractDataProvider):
 
         self._type_padding = data_config['process_dim']
 
+    def get_scaler(self):
+        return self._scaler
+
     def epoch_inverse_scaling(self, scaled_records):
         return self._scaler.inverse_scaling(scaled_records)
 
@@ -62,18 +65,20 @@ class DataProvider(AbstractDataProvider):
         return self._metrics_function(preds, labels, seq_mask=seq_mask)
 
     def iterate_batch_data(self):
-        if self._is_first_iterate:
-            scale_func = self._scaler.fit_scaling
-        else:
-            scale_func = self._scaler.scaling
-
         # record_data of a partition whose shape is [n_records, ...]
         for data in self._data_source.load_partition_data():
             inputs = self._process_model_input(data)
 
-            scaled_inputs = scale_func(inputs)
+            if self._scaler.is_fit():
+                scaled_inputs = self._scaler.scaling(inputs)
+            else:
+                scaled_inputs = self._scaler.fit_scaling(inputs)
+
             if self._is_first_iterate:
-                print(f'Load dataset {self._data_source.data_name}: {scaled_inputs["types"].shape}')
+                mean_dt = np.mean(scaled_inputs["dtimes"])
+
+                print(f'Load dataset {self._data_source.data_name}: {scaled_inputs["types"].shape}, '
+                      f'mean dt: {mean_dt}')
 
             # yield records to batch data separately
             for batch_data in yield2batch_data(scaled_inputs, self._batch_size, keep_remainder=True):
