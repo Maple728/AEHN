@@ -131,7 +131,7 @@ class AEHN(BaseModel):
         with tf.variable_scope('intensity_layer', reuse=reuse):
             attention_layer = Attention(self.hidden_dim, 'general')
             delta_layer = layers.Dense(self.hidden_dim, activation=tf.nn.softplus, name='delta_layer')
-            mu_layer = layers.Dense(self.hidden_dim, activation=tf.nn.softplus, name='mu_layer')
+            mu_layer = layers.Dense(self.hidden_dim, activation=tf.nn.tanh, name='mu_layer')
 
         with tf.name_scope('intensity_layer'):
             batch_size = tf.shape(x_input)[0]
