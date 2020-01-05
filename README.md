@@ -22,6 +22,14 @@ All datasets can be downloaded from [BaiduDisk](https://pan.baidu.com/s/1H6mfLB1
 2. StackOverflow (so)
  - num of event: 22
 
+
+20200104: 
+Data of Retweet and SO used in previous paper is stored in 
+- [Retweet](https://pan.baidu.com/s/1DOSvbkEIIN1T9AvFd9-F9A)
+- [SO](https://pan.baidu.com/s/18Qo8uov2cD_nQwwaeiTXgQ)
+
+
+
 ## Model Training
 ```bash
 # Retweet
