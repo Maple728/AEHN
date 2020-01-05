@@ -55,7 +55,7 @@ On simullar datasets:
 
 |  |1d Hawkes |2d Hawkes  |  3d Hawkes |10d Hawkes| 10d Hawkes 0101 |20d Hawkes| comment |
 |--|--|--|--|--|--|--|--|
-| NJSDE|  |  |   |   |  | -1.168| epoch 500  |
+| NJSDE|  |  |  -1.409 |   |  | -1.168| epoch 500  |
 | NJSDE|  -0.881|-2.324    |  -1.422 | -1.521 |  | | epoch 200  |
 | RMTPP| -0.935 | -2.325  | -1.459 | -1.542 |   -1.114 | -1.388 | 500 epoch, 窗口50  |
 | NHP |   -0.847|  -2.262  |  -1.373    | -1.487  | -1.057 | -1.180 | 500 epoch |
