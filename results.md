@@ -6,6 +6,7 @@
 ### Retweet
 | Model | method | type_acc | time_rmse |
 | :----:| :-----: | :------: | :-------: |
+|  NHP | 350 epoch  | 58.97%   | 326.64   |
 |  RMTPP | 窗口20  | 49.80%   | 288.75   |
 |  RMTPP | 窗口50  | 54.00%   | 309.92   |
 | AEHN_simple |	hybrid|  59.91% | 274.64 |
@@ -14,6 +15,7 @@
 ### Stack Overflow (so)
 | Model | method | type_acc | time_rmse |
 | :----:| :-----: | :------: | :-------: |
+|  NHP | 500 epoch  | 45.50%   | 0.71   |
 |  RMTPP | 窗口20  | 43.10%   | 0.73   |
 |  RMTPP | 窗口50  | 44.31%   | 0.71   |
 | AEHN_simple |   hybrid  | 45.85%   |   0.64    |
@@ -24,6 +26,7 @@
 |  RMTPP | xx  | xx%   | xx   |
 |  RMTPP | xx  | xx%   | xx   |
 | AEHN_simple |   nll  | 50.95%   |   0.82   |
+
 
 
 ## Loglikelihood-per-event
@@ -52,9 +55,9 @@ On simullar datasets:
 
 |  |1d Hawkes |2d Hawkes  |  3d Hawkes |10d Hawkes| 10d Hawkes 0101 |20d Hawkes| comment |
 |--|--|--|--|--|--|--|--|
-| NJSDE|  |  |   |   |  | | epoch 500  |
+| NJSDE|  |  |   |   |  | -1.168| epoch 500  |
 | NJSDE|  -0.881|-2.324    |  -1.422 | -1.521 |  | | epoch 200  |
 | RMTPP| -0.935 | -2.325  | -1.459 | -1.542 |   -1.114 | -1.388 | 500 epoch, 窗口50  |
 | NHP |   -0.847|  -2.262  |  -1.373    | -1.487  | -1.057 | -1.180 | 500 epoch |
-| AEHN | -0.690(80 epoch) |  -2.135   | -1.255 | -1.495 | -1.043 | -1.157 | 1000 epoch, step=10 |
+| AEHN | -0.656 |  -2.135   | -1.255 | -1.495 | -1.043 | -1.157 | 1000 epoch, step=10 |
 
