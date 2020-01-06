@@ -6,9 +6,11 @@
 @time: 2019/12/21 21:35
 @desc:
 """
-
+from functools import reduce
 import pickle
+import pandas as pd
 import numpy as np
+import os
 
 from aehn.lib.utilities import concat_arrs_of_dict
 
@@ -83,18 +85,45 @@ def gen_data_from_retweet_or_so():
         pickle.dump(test_data, file)
 
 
-def gen_data_from_order_book(n_points_per_record=32):
-    fpath = 'amazon.csv'
+def gen_data_from_nhp_format(data_folder):
+    train_fname = data_folder + '/train.pkl'
+    valid_fname = data_folder + '/dev.pkl'
+    test_fname = data_folder + '/test.pkl'
+
+    with open(train_fname, 'rb') as f:
+        train_records = pickle.load(f)['train']
+
+    with open(valid_fname, 'rb') as f:
+        valid_records = pickle.load(f)['dev']
+
+    with open(test_fname, 'rb') as f:
+        test_records = pickle.load(f)['test']
+
+    with open('train' + '.pkl', 'wb') as file:
+        pickle.dump(train_records, file)
+
+    with open('valid' + '.pkl', 'wb') as file:
+        pickle.dump(valid_records, file)
+
+    with open('test' + '.pkl', 'wb') as file:
+        pickle.dump(test_records, file)
+
+
+def split_records(record, n_points):
+    res = []
+    n_records = len(record)
+
+    for i in range(1, n_records, n_points):
+        # i - 1 to avoid the last point doesn't be evaluated.
+        res.append(record[i - 1: i + n_points])
+
+    return res
+
+
+def gen_data_from_order_book(tick, n_points_per_record=32, folder='raw_data'):
+    fpath = os.path.join(folder, f'{tick}.csv')
     csv_data = np.loadtxt(fpath, delimiter=',', skiprows=1)
 
-    def split_records(record, n_points):
-        res = []
-        n_records = len(record)
-
-        for i in range(0, n_records, n_points):
-            res.append(record[i: i + n_points])
-
-        return res
 
     data = {
         'types': split_records(csv_data[:, 2], n_points_per_record),
@@ -124,6 +153,30 @@ def gen_data_from_order_book(n_points_per_record=32):
         'timestamps': data['timestamps'][valid_idx:],
         'marks': data['marks'][valid_idx:]
     }
+    return train_data, valid_data, test_data
+
+
+def gen_data_from_multi_order_book(ticks, n_points_per_record=32, folder='raw_data'):
+    train_data = []
+    valid_data = []
+    test_data = []
+
+    for tick in ticks:
+        t, v, e = gen_data_from_order_book(tick, n_points_per_record, folder)
+        train_data.append(t)
+        valid_data.append(v)
+        test_data.append(e)
+
+    def concat_dict_list(dict_list):
+        res = {}
+        for key in dict_list[0].keys():
+            res[key] = np.concatenate([d[key] for d in dict_list], axis=0)
+
+        return res
+
+    train_data = concat_dict_list(train_data)
+    valid_data = concat_dict_list(valid_data)
+    test_data = concat_dict_list(test_data)
 
     with open('train' + '.pkl', 'wb') as file:
         pickle.dump(train_data, file)
@@ -135,9 +188,69 @@ def gen_data_from_order_book(n_points_per_record=32):
         pickle.dump(test_data, file)
 
 
+def make_fin_data(tick, folder='raw_data'):
+    file = os.path.join(folder, f'{tick}_2012-06-21_34200000_57600000_message_1.csv')
+
+    data_df = pd.read_csv(file, header=None)
+
+    data_df.columns = ['timestamps', 'types', 'orderid', 'size', 'price', 'direction']
+
+    # merge same type of event happening at the same time
+    data_df = data_df.groupby(['timestamps', 'types'])['size'].agg('sum').reset_index()
+
+    # remove first type 3 and then type 1 at the same time
+    data_df.drop_duplicates('timestamps', inplace=True)
+
+    data_df.to_csv(os.path.join(folder, f'{tick}.csv'), header=True)
+
+    return
+
+
+def truncate_data2fix_window(data_folder, window_size):
+
+    def split_data(data):
+        res = {}
+        for k, v in data.items():
+            res[k] = reduce(lambda acc, x: acc + x, [split_records(record, window_size) for record in v], [])
+        return res
+
+    train_fname = data_folder + '/train.pkl'
+    valid_fname = data_folder + '/valid.pkl'
+    test_fname = data_folder + '/test.pkl'
+
+    with open(train_fname, 'rb') as f:
+        train_records = pickle.load(f)
+
+    with open(valid_fname, 'rb') as f:
+        valid_records = pickle.load(f)
+
+    with open(test_fname, 'rb') as f:
+        test_records = pickle.load(f)
+
+    with open('train' + '.pkl', 'wb') as file:
+        data = split_data(train_records)
+        print(len(data['types']))
+        pickle.dump(data, file)
+
+    with open('valid' + '.pkl', 'wb') as file:
+        data = split_data(valid_records)
+        print(len(data['types']))
+        pickle.dump(data, file)
+
+    with open('test' + '.pkl', 'wb') as file:
+        data = split_data(test_records)
+        print(len(data['types']))
+        pickle.dump(data, file)
+
+
 if __name__ == '__main__':
     # gen_data_from_synthetic_data('data_poisson', 'poisson')
     # gen_data_from_synthetic_data('data_exphawkes', 'exponential_hawkes')
     # gen_data_from_synthetic_data('data_powerlaw_hawkes', 'powerlaw_hawkes')
     # gen_data_from_synthetic_data('data_selfcorrection', 'self_inhibiting')
-    gen_data_from_order_book()
+    # gen_data_from_order_book()
+
+    # ticks = ['AAPL', 'AMZN', 'GOOG', 'INTC', 'MSFT']
+    # [make_fin_data(tick) for tick in ticks]
+    # gen_data_from_multi_order_book(ticks)
+    truncate_data2fix_window('../data/data_retweet_trunc', window_size=64)
