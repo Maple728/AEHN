@@ -120,12 +120,15 @@ class DataProvider(AbstractDataProvider):
         statistics = {}
         # get target seqs
         type_seqs = data['types']
-        dt_seqs = [[t_seq[i] - t_seq[max(i - 1, 0)] for i in range(len(t_seq))]
+        dt_seqs = [[t_seq[i] - t_seq[i - 1] for i in range(1, len(t_seq))]
                    for t_seq in data['timestamps']]
 
         event_num = self._type_padding
 
-        types = sum(type_seqs, [])
+        if isinstance(type_seqs[0], list):
+            types = sum(type_seqs, [])
+        else:
+            types = np.concatenate(type_seqs)
         dts = sum(dt_seqs, [])
 
         # get statistics
@@ -133,15 +136,25 @@ class DataProvider(AbstractDataProvider):
         statistics['max_len_of_record'] = max([len(seq) for seq in type_seqs])
         statistics['min_len_of_record'] = min([len(seq) for seq in type_seqs])
         statistics['max_dt'] = np.max(dts)
-        statistics['min_dt'] = np.min(dts)
         statistics['mean_dt'] = np.mean(dts)
-        statistics['median_dt'] = np.median(dts)
 
         type_count = [0] * event_num
         for t in types:
-            type_count[t] += 1
+            type_count[int(t)] += 1
 
         type_ratio = np.divide(type_count, np.sum(type_count))
         statistics['max_type_ratio'] = np.max(type_ratio)
+
+        # plot marks
+        mark_seqs = data.get('marks')
+        if mark_seqs is not None:
+            import matplotlib.pyplot as plt
+            if isinstance(mark_seqs, list):
+                marks = sum(mark_seqs, [])
+            else:
+                marks = np.concatenate(mark_seqs)
+            plt.figure()
+            plt.hist(marks, bins=100, range=(0, 2000))
+            plt.show()
 
         return statistics
