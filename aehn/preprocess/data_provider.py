@@ -67,18 +67,15 @@ class DataProvider(AbstractDataProvider):
     def iterate_batch_data(self):
         # record_data of a partition whose shape is [n_records, ...]
         for data in self._data_source.load_partition_data():
-            inputs = self._process_model_input(data)
+            if self._is_first_iterate:
+                data_stats = self._dataset_statistics(data)
+                print(f'Load dataset {self._data_source.data_name}: {data_stats}')
 
+            inputs = self._process_model_input(data)
             if self._scaler.is_fit():
                 scaled_inputs = self._scaler.scaling(inputs)
             else:
                 scaled_inputs = self._scaler.fit_scaling(inputs)
-
-            if self._is_first_iterate:
-                mean_dt = np.mean(scaled_inputs["dtimes"])
-
-                print(f'Load dataset {self._data_source.data_name}: {scaled_inputs["types"].shape}, '
-                      f'mean dt: {mean_dt}')
 
             # yield records to batch data separately
             for batch_data in yield2batch_data(scaled_inputs, self._batch_size, keep_remainder=True):
@@ -118,3 +115,33 @@ class DataProvider(AbstractDataProvider):
         ret['dtimes'] = dt_seqs_padded
 
         return ret
+
+    def _dataset_statistics(self, data):
+        statistics = {}
+        # get target seqs
+        type_seqs = data['types']
+        dt_seqs = [[t_seq[i] - t_seq[max(i - 1, 0)] for i in range(len(t_seq))]
+                   for t_seq in data['timestamps']]
+
+        event_num = self._type_padding
+
+        types = sum(type_seqs, [])
+        dts = sum(dt_seqs, [])
+
+        # get statistics
+        statistics['n_records'] = len(type_seqs)
+        statistics['max_len_of_record'] = max([len(seq) for seq in type_seqs])
+        statistics['min_len_of_record'] = min([len(seq) for seq in type_seqs])
+        statistics['max_dt'] = np.max(dts)
+        statistics['min_dt'] = np.min(dts)
+        statistics['mean_dt'] = np.mean(dts)
+        statistics['median_dt'] = np.median(dts)
+
+        type_count = [0] * event_num
+        for t in types:
+            type_count[t] += 1
+
+        type_ratio = np.divide(type_count, np.sum(type_count))
+        statistics['max_type_ratio'] = np.max(type_ratio)
+
+        return statistics
