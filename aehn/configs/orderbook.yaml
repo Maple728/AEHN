@@ -6,10 +6,10 @@ data:
   process_dim: 6
   use_cache: False
   cache_dir: cache
-  metrics: [type_acc, time_rmse]
+  metrics: [type_acc, time_rmse, marks_rmse]
 
 model:
-  name: AEHN
+  name: AEHN_mark
   process_dim: 6
   hidden_dim: 32
   # hybrid or loglikelihood

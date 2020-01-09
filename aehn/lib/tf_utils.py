@@ -49,7 +49,7 @@ def create_tensor(shape, value):
     return tf.fill(tensor_shape, value)
 
 
-def gett_variable_weights(name, shape, collections=None):
+def get_variable_weights(name, shape, collections=None):
     return tf.get_variable(name, shape=shape, dtype=FLOAT_TYPE,
                            initializer=tf.glorot_normal_initializer(),
                            collections=collections)

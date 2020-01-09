@@ -1,15 +1,15 @@
-from aehn.lib.metrics import shuffle_label_hybrid_loss_tf
-from aehn.lib.metrics import shuffle_label_loglikelihood_loss_tf
 from aehn.lib.metrics import time_mae_np
 from aehn.lib.metrics import time_rmse_np
 from aehn.lib.metrics import type_acc_np
+from aehn.lib.metrics import marks_rmse_np
 from aehn.lib.metrics import mape_np
 
 from aehn.lib.scalers import ZeroMaxScaler
 from aehn.lib.scalers import MinMaxScaler
 from aehn.lib.scalers import VoidScaler
 from aehn.lib.scalers import DictScaler
-from aehn.lib.scalers import StandZeroMaxScaler
+from aehn.lib.scalers import SingletonZeroMaxScaler
+from aehn.lib.scalers import SingletonStandScaler
 
 from aehn.lib.tf_utils import tensordot
 from aehn.lib.tf_utils import swap_axes
@@ -29,15 +29,16 @@ from aehn.lib.utilities import yield2batch_data
 from aehn.lib.utilities import Timer
 
 
-__all__ = ['shuffle_label_hybrid_loss_tf',
-           'shuffle_label_loglikelihood_loss_tf',
-           'time_mae_np',
+__all__ = ['time_mae_np',
            'time_rmse_np',
            'type_acc_np',
+           'marks_rmse_np',
            'mape_np',
+
            'ZeroMaxScaler',
            'MinMaxScaler',
-           'StandZeroMaxScaler',
+           'SingletonZeroMaxScaler',
+           'SingletonStandScaler',
            'DictScaler',
            'VoidScaler',
 

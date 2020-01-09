@@ -38,7 +38,10 @@ class AbstractScaler(object):
 
 
 class DictScaler(AbstractScaler):
-
+    """
+    Scaler for dictionary that scales the items specified by key scaler in initialization. If the item doesn't exist,
+    do nothing.
+    """
     def __init__(self, **kwargs):
         self.scaler_dict = {}
         for k, scaler_class in kwargs.items():
@@ -49,10 +52,6 @@ class DictScaler(AbstractScaler):
         for _, scaler in self.scaler_dict.items():
             res = res and scaler.is_fit()
         return res
-
-    def fit_scaling(self, dict_data):
-        self.fit(dict_data)
-        return self.scaling(dict_data)
 
     def fit(self, dict_data):
         for k, records in dict_data.items():
@@ -96,7 +95,7 @@ class VoidScaler(AbstractScaler):
         return scaled_records
 
 
-class StandZeroMaxScaler(AbstractScaler):
+class SingletonZeroMaxScaler(AbstractScaler):
     def __init__(self, epsilon=1e-8):
         self._max_val = None
         self._epsilon = epsilon
@@ -105,21 +104,17 @@ class StandZeroMaxScaler(AbstractScaler):
         return self._max_val is not None
 
     def fit(self, records):
-        if self._max_val is not None:
+        if self.is_fit():
             raise RuntimeError('Try to fit a fitted scaler!')
         self._max_val = np.max(records)
 
-    def fit_scaling(self, records):
-        self.fit(records)
-        return self.scaling(records)
-
     def scaling(self, records):
-        if self._max_val is None:
+        if not self.is_fit():
             raise RuntimeError('Try to scaling records using a uninitialized scaler!')
         return records / (self._max_val + self._epsilon)
 
     def inverse_scaling(self, scaled_records):
-        if self._max_val is None:
+        if not self.is_fit():
             raise RuntimeError('Try to inverse_scaling records using a uninitialized scaler!')
         return scaled_records * (self._max_val + self._epsilon)
 
@@ -138,10 +133,6 @@ class MinMaxScaler(AbstractScaler):
             raise RuntimeError('Try to fit a fitted scaler!')
         self._max_val = np.max(records, axis=0)
         self._min_val = np.min(records, axis=0)
-
-    def fit_scaling(self, records):
-        self.fit(records)
-        return self.scaling(records)
 
     def scaling(self, records):
         if not self.is_fit():
@@ -168,10 +159,6 @@ class ZeroMaxScaler(AbstractScaler):
             raise RuntimeError('Try to fit a fitted scaler!')
         self._max_val = np.max(records, axis=1, keepdims=True)
 
-    def fit_scaling(self, records):
-        self.fit(records)
-        return self.scaling(records)
-
     def scaling(self, records):
         if not self.is_fit():
             raise RuntimeError('Try to scaling records using a uninitialized scaler!')
@@ -181,3 +168,29 @@ class ZeroMaxScaler(AbstractScaler):
         if not self.is_fit():
             raise RuntimeError('Try to inverse_scaling records using a uninitialized scaler!')
         return (scaled_records * (self._max_val - self._min_val + self._epsilon)) + self._min_val
+
+
+class SingletonStandScaler(AbstractScaler):
+    def __init__(self, epsilon=1e-8):
+        self._mean = None
+        self._std = None
+        self._epsilon = epsilon
+
+    def is_fit(self):
+        return self._mean is not None
+
+    def fit(self, records):
+        if self.is_fit():
+            raise RuntimeError('Try to fit a fitted scaler!')
+        self._mean = np.mean(records)
+        self._std = np.std(records)
+
+    def scaling(self, records):
+        if not self.is_fit():
+            raise RuntimeError('Try to scaling records using a uninitialized scaler!')
+        return (records - self._mean) / (self._std + self._epsilon)
+
+    def inverse_scaling(self, scaled_records):
+        if not self.is_fit():
+            raise RuntimeError('Try to inverse_scaling records using a uninitialized scaler!')
+        return scaled_records * (self._std + self._epsilon) + self._mean

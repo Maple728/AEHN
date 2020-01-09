@@ -7,17 +7,15 @@
 | Model | method | type_acc | time_rmse |
 | :----:| :-----: | :------: | :-------: |
 |  NHP | 350 epoch  | 58.97%   | 326.64   |
-|  RMTPP | 窗口20  | 49.80%   | 288.75   |
-|  RMTPP | 窗口50  | 54.00%   | 309.92   |
-| AEHN_simple |	hybrid|  59.91% | 274.64 |
+|  RMTPP | window 50  | 54.14%   | 288.75 |
+| AEHN_simple |	nll|  60.15% | 255.75 |
 
 
 ### Stack Overflow (so)
 | Model | method | type_acc | time_rmse |
 | :----:| :-----: | :------: | :-------: |
 |  NHP | 500 epoch  | 45.50%   | 0.71   |
-|  RMTPP | 窗口20  | 43.10%   | 0.73   |
-|  RMTPP | 窗口50  | 44.31%   | 0.71   |
+|  RMTPP | window 50  | 45.18%   | 0.73   |
 | AEHN_simple |   hybrid  | 45.85%   |   0.64    |
 
 ### Orderbook Trade 

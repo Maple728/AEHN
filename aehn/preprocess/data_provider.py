@@ -10,7 +10,7 @@ from abc import abstractmethod
 import numpy as np
 
 from aehn.lib import yield2batch_data, get_metrics_callback_from_names
-from aehn.lib import DictScaler, VoidScaler, ZeroMaxScaler, StandZeroMaxScaler
+from aehn.lib import DictScaler, VoidScaler, ZeroMaxScaler, SingletonStandScaler
 
 
 class AbstractDataProvider(object):
@@ -49,7 +49,7 @@ class DataProvider(AbstractDataProvider):
         self._data_source = data_source
         self._batch_size = data_config['batch_size']
         self._metrics_function = get_metrics_callback_from_names(data_config['metrics'])
-        self._scaler = scaler if scaler else DictScaler(dtimes=VoidScaler)
+        self._scaler = scaler if scaler else DictScaler(dtimes=VoidScaler, marks=SingletonStandScaler)
         self._is_first_iterate = True
 
         self._type_padding = data_config['process_dim']
@@ -113,6 +113,16 @@ class DataProvider(AbstractDataProvider):
         ret = dict()
         ret['types'] = type_seqs_padded
         ret['dtimes'] = dt_seqs_padded
+
+        # add to model input if original input has marks
+        if 'marks' in records.keys():
+            marks_seqs = records['marks']
+            marks_padding = 0.0
+            marks_padded = np.ones([n_records, max_len, 1]) * marks_padding
+            for i in range(n_records):
+                len_seq = len(marks_seqs[i])
+                marks_padded[i, : len_seq, 0] = marks_seqs[i]
+            ret['marks'] = marks_padded
 
         return ret
 
