@@ -52,15 +52,28 @@ def make_2d_hawkes():
 
 def make_1d_hawkes():
     from tick import hawkes
-    tmax = 180
-    hawkes_1d = hawkes.SimuHawkes(n_nodes=1, end_time=tmax, verbose=False)
-    kernel = hawkes.SimuHawkesExpKernels(adjacency=0.5,
-                                         decays=1.6,
-                                         baseline=[0.5])
+    tmax = 140
+    hawkes_kernel = hawkes.SimuHawkesExpKernels(adjacency=np.array([[0.5]]),
+                                                decays=1.6,
+                                                baseline=np.array([0.5]),
+                                                end_time=tmax)
 
-    hawkes_1d.simulate()
+    multi_hawkes = hawkes.SimuHawkesMulti(hawkes_kernel,
+                                          n_simulations=500,
+                                          n_threads=4)
 
-    return
+    multi_hawkes.simulate()
+
+    timestamps = [fuse_node_times(e) for e in multi_hawkes.timestamps]
+
+    event_timestamps, event_types = list(zip(*timestamps))
+
+    res = dict()
+    res['timestamps'] = event_timestamps
+    res['types'] = event_types
+
+    return res
+
 
 def make_3d_hawkes():
     from tick import hawkes
@@ -70,7 +83,7 @@ def make_3d_hawkes():
     decay_3d = 0.5
     baseline_3d = np.array([0.1, 0.15, 0.4])
 
-    tmax = 180
+    tmax = 100
 
     hawkes_3d = hawkes.SimuHawkesExpKernels(adj_3d,
                                             decay_3d,
@@ -99,11 +112,200 @@ def make_3d_hawkes():
     return res
 
 
+def make_10d_hawkes():
+    from tick import hawkes
+    adj = np.array([[0.05] * 10,
+                    [0.13 - i / 40 for i in range(10)],
+                    [0.05 - i / 40 for i in range(10)],
+                    [0.03 * i / 20 for i in range(10)],
+                    [0.1 - i / 30 for i in range(10)],
+                    [0.09] * 10,
+                    [0.5 * (i + 1) / 20 for i in np.arange(start=0, stop=20, step=2)],
+                    [0.0] * 10,
+                    [0.09] * 5 + [0.01] * 5,
+                    [0.7 - i / 40 for i in range(10)]]) * 0.5
+
+    decay = 0.05
+    baseline = np.array([0.7, 0.15, 0.4, 0.2, 0.5] * 2)
+
+    tmax = 30
+
+    hawkes_kernel = hawkes.SimuHawkesExpKernels(adj,
+                                                decay,
+                                                baseline=baseline,
+                                                end_time=tmax,
+                                                verbose=False)
+
+    hawkes_kernel.reset()
+    hawkes_kernel.track_intensity(0.1)
+
+    multi_hawkes = hawkes.SimuHawkesMulti(hawkes_kernel,
+                                          n_simulations=500,
+                                          n_threads=4)
+
+    multi_hawkes.simulate()
+
+    timestamps = [fuse_node_times(e) for e in multi_hawkes.timestamps]
+
+    event_timestamps, event_types = list(zip(*timestamps))
+
+    res = dict()
+    res['timestamps'] = event_timestamps
+    res['types'] = event_types
+
+    return res
+
+
+def make_10d_hawkes_2():
+    from tick import hawkes
+    adj = np.array([[0.05] * 10,
+                    [0.03] * 5 + [0.07] * 5,
+                    [0.05 + i / 40 for i in range(10)],
+                    [0.03 * i / 20 for i in range(10)],
+                    [0.013] * 2 + [0.021] * 8,
+                    [0.09] * 10,
+                    [0.5 * (i + 1) / 20 for i in np.arange(start=0, stop=10, step=1)],
+                    [0.0] * 10,
+                    [0.09] * 4 + [0.01] * 6,
+                    [0.08 - i / 600 for i in range(10)]])
+
+    decay = 0.2
+    baseline = np.array([0.7, 0.25, 0.4, 0.2, 0.5] * 2)
+
+    tmax = 30
+
+    hawkes_kernel = hawkes.SimuHawkesExpKernels(adj,
+                                                decay,
+                                                baseline=baseline,
+                                                end_time=tmax,
+                                                verbose=False)
+
+    hawkes_kernel.reset()
+    hawkes_kernel.track_intensity(0.1)
+
+    multi_hawkes = hawkes.SimuHawkesMulti(hawkes_kernel,
+                                          n_simulations=500,
+                                          n_threads=4)
+
+    multi_hawkes.simulate()
+
+    timestamps = [fuse_node_times(e) for e in multi_hawkes.timestamps]
+
+    event_timestamps, event_types = list(zip(*timestamps))
+
+    res = dict()
+    res['timestamps'] = event_timestamps
+    res['types'] = event_types
+
+    return res
+
+
+def make_5d_hawkes():
+    from tick import hawkes
+    adj = np.array([[0.1, 0.1, 0.5, 0.6, 0.1],
+                    [0.1, 0.2, 0.02, 0.04, 0.2],
+                    [0.3, 0.0, 0.5, 0.4, 0.1],
+                    [0.01, 0.4, 0.05, 0.02, 0.1],
+                    [0.03, 0.3, 0.5, 0.4, 0.1]])
+    decay = 0.4
+    baseline = np.array([0.1, 0.15, 0.4, 0.1, 0.5])
+
+    tmax = 20
+
+    hawkes_kernel = hawkes.SimuHawkesExpKernels(adj,
+                                                decay,
+                                                baseline=baseline,
+                                                end_time=tmax,
+                                                verbose=False)
+
+    hawkes_kernel.reset()
+    hawkes_kernel.track_intensity(0.1)
+
+    multi_hawkes = hawkes.SimuHawkesMulti(hawkes_kernel,
+                                          n_simulations=500,
+                                          n_threads=4)
+
+    multi_hawkes.simulate()
+
+    timestamps = [fuse_node_times(e) for e in multi_hawkes.timestamps]
+
+    event_timestamps, event_types = list(zip(*timestamps))
+
+    res = dict()
+    res['timestamps'] = event_timestamps
+    res['types'] = event_types
+
+    return res
+
+
+def make_20d_hawkes():
+    from tick import hawkes
+    adj = np.array([[0.05] * 20,
+                    [0.03] * 5 + [0.07] * 15,
+                    [0.05 + i / 40 for i in range(20)],
+                    [0.03 * i / 20 for i in range(20)],
+                    [0.013] * 9 + [0.021] * 11,
+                    [0.09] * 20,
+                    [0.5 * (i + 1) / 20 for i in np.arange(start=0, stop=20, step=1)],
+                    [0.0] * 20,
+                    [0.09] * 10 + [0.01] * 10,
+                    [0.08 - i / 600 for i in range(20)],
+                    [0.05] * 20,
+                    [(40 - i) / 200 for i in range(20)],
+                    [0.05 + i / 40 for i in range(20)],
+                    [0.03 * i / 20 for i in range(20)],
+                    [0.1 + i / 30 for i in range(20)],
+                    [0.09] * 18 + [0.04] * 2,
+                    [0.01] * 20,
+                    [0.0] * 20,
+                    [0.09] * 10 + [0.01] * 10,
+                    [0.07 - i / 400 for i in range(20)]
+                    ]) * 0.5
+
+    decay = 0.1
+    baseline = np.array([0.7, 0.25, 0.4, 0.2, 0.5] * 4)
+
+    tmax = 15
+
+    hawkes_kernel = hawkes.SimuHawkesExpKernels(adj,
+                                                decay,
+                                                baseline=baseline,
+                                                end_time=tmax,
+                                                verbose=False)
+
+    hawkes_kernel.reset()
+    hawkes_kernel.track_intensity(0.1)
+
+    multi_hawkes = hawkes.SimuHawkesMulti(hawkes_kernel,
+                                          n_simulations=500,
+                                          n_threads=4)
+
+    multi_hawkes.simulate()
+
+    timestamps = [fuse_node_times(e) for e in multi_hawkes.timestamps]
+
+    event_timestamps, event_types = list(zip(*timestamps))
+
+    res = dict()
+    res['timestamps'] = event_timestamps
+    res['types'] = event_types
+
+    return res
+
+
 def make_syn_dataset(dim=2):
-    if dim == 2:
+    if dim == 1:
+        data = make_1d_hawkes()
+    elif dim == 2:
         data = make_2d_hawkes()
-    else:
+    elif dim == 3:
         data = make_3d_hawkes()
+    elif dim == 5:
+        data = make_5d_hawkes()
+    elif dim == 10:
+        data = make_10d_hawkes_2()
+    else:
+        data = make_20d_hawkes()
 
     n_records = len(data['types'])
     train_idx = int(0.6 * n_records)
@@ -136,4 +338,4 @@ def make_syn_dataset(dim=2):
 
 
 if __name__ == '__main__':
-    make_syn_dataset(dim=2)
+    make_syn_dataset(dim=10)
