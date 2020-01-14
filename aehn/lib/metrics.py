@@ -48,6 +48,9 @@ def marks_rmse_np(preds, labels, **kwargs):
     pred = preds['marks'][seq_mask]
     label = labels['marks'][seq_mask]
 
+    # pred negative value mask
+    pred[pred < 0] = 0
+
     rmse = np.sqrt(np.mean((pred - label) ** 2))
     return rmse
 

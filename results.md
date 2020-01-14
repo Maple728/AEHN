@@ -25,6 +25,12 @@
 |  RMTPP | xx  | xx%   | xx   | |
 | AEHN_simple |   nll  | 52.68%   |   0.31   | VoidScaler|
 
+### Bund Future 
+| Model | method | type_acc | time_rmse | comment|
+| :----:| :-----: | :------: | :-------: | :-------: |
+|  RMTPP | xx  | xx%   | xx   | |
+|  RMTPP | xx  | xx%   | xx   | |
+| AEHN_simple |   nll  | 63.83%   |   5.66   | VoidScaler|
 
 
 ## Loglikelihood-per-event

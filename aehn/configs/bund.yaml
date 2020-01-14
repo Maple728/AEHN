@@ -1,0 +1,29 @@
+base_dir: logs
+data:
+  batch_size: 32
+  data_name: bund
+  data_filename: data/data_bund/{}.pkl
+  process_dim: 4
+  use_cache: False
+  cache_dir: cache
+  metrics: [type_acc, time_rmse]
+
+model:
+  name: AEHN
+  process_dim: 4
+  hidden_dim: 32
+  # hybrid or loglikelihood
+  pred_method: loglikelihood
+
+  # following three setting are activated when using loglikelihood
+  n_loss_integral_sample: 20
+  n_pred_integral_sample: 100
+  max_time_pred: 100.0
+
+train:
+  dropout_rate: 0.0
+  lr: 0.001
+  epoch: 0
+  max_epoch: 1000
+  lr_scheduler: PlateauLRScheduler
+  patience: 10

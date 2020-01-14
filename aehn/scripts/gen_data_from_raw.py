@@ -15,6 +15,17 @@ import os
 from aehn.lib.utilities import concat_arrs_of_dict
 
 
+def split_records(record, n_points):
+    res = []
+    n_records = len(record)
+
+    for i in range(1, n_records, n_points):
+        # i - 1 to avoid the last point doesn't be evaluated.
+        res.append(record[i - 1: i + n_points])
+
+    return res
+
+
 def gen_data_from_synthetic_data(data_folder_name, data_csv_name):
     train_fname = '../data/{}/{}_training.csv'.format(data_folder_name, data_csv_name)
     valid_fname = '../data/{}/{}_validation.csv'.format(data_folder_name, data_csv_name)
@@ -109,22 +120,90 @@ def gen_data_from_nhp_format(data_folder):
         pickle.dump(test_records, file)
 
 
-def split_records(record, n_points):
-    res = []
-    n_records = len(record)
+def gen_data_from_bund_future(fname, n_points_per_record=64):
+    types = []
+    timestamps = []
 
-    for i in range(1, n_records, n_points):
-        # i - 1 to avoid the last point doesn't be evaluated.
-        res.append(record[i - 1: i + n_points])
+    npzfile = np.load(fname)
+    # sort by date
+    keys = sorted(list(npzfile.keys()))
+    # loop over date
+    for key in keys:
+        data = npzfile[key]
 
-    return res
+        day_types = []
+        day_timestamps = []
+        num = len(data)
+        seqs_idx = [0] * num
+
+        while True:
+            # select the minimum time
+            min_time = float('inf')
+            min_seq_id = None
+            for i in range(num):
+                if seqs_idx[i] >= len(data[i]):
+                    continue
+                if data[i][seqs_idx[i]] < min_time:
+                    min_time = data[i][seqs_idx[i]]
+                    min_seq_id = i
+            # iteration over all seq over
+            if min_seq_id is None:
+                break
+            # add the selection into list
+            day_types.append(min_seq_id)
+            day_timestamps.append(min_time)
+
+            # update
+            seqs_idx[min_seq_id] += 1
+
+        assert np.sum(seqs_idx) == len(day_types)
+        # split record
+        day_types = split_records(day_types, n_points_per_record)
+        day_timestamps = split_records(day_timestamps, n_points_per_record)
+
+        types.extend(day_types)
+        timestamps.extend(day_timestamps)
+
+    n_records = len(types)
+    train_end_idx = int(n_records * 0.6)
+    valid_end_idx = int(n_records * 0.8)
+
+    train_records = {
+        'types': types[0: train_end_idx],
+        'timestamps': timestamps[0: train_end_idx]
+    }
+    valid_records = {
+        'types': types[train_end_idx: valid_end_idx],
+        'timestamps': timestamps[train_end_idx: valid_end_idx]
+    }
+    test_records = {
+        'types': types[valid_end_idx:],
+        'timestamps': timestamps[valid_end_idx:]
+    }
+
+    with open('train' + '.pkl', 'wb') as file:
+        pickle.dump(train_records, file)
+
+    with open('valid' + '.pkl', 'wb') as file:
+        pickle.dump(valid_records, file)
+
+    with open('test' + '.pkl', 'wb') as file:
+        pickle.dump(test_records, file)
 
 
 def gen_data_from_order_book(tick, n_points_per_record=32, folder='raw_data'):
     fpath = os.path.join(folder, f'{tick}.csv')
     csv_data = np.loadtxt(fpath, delimiter=',', skiprows=1)
 
+    def reset_type_id(type_col):
+        old_type_ids = np.unique(type_col)
+        new_type_ids = list(range(len(old_type_ids)))
+        o2n_map = {o_id: n_id for o_id, n_id in zip(old_type_ids, new_type_ids)}
 
+        new_type_col = [o2n_map[type_id] for type_id in type_col]
+        return new_type_col
+
+    csv_data[:, 2] = reset_type_id(csv_data[:, 2])
     data = {
         'types': split_records(csv_data[:, 2], n_points_per_record),
         'timestamps': split_records(csv_data[:, 1], n_points_per_record),
@@ -251,6 +330,8 @@ if __name__ == '__main__':
     # gen_data_from_order_book()
 
     # ticks = ['AAPL', 'AMZN', 'GOOG', 'INTC', 'MSFT']
+    # ticks = ['MSFT']
     # [make_fin_data(tick) for tick in ticks]
-    # gen_data_from_multi_order_book(ticks)
-    truncate_data2fix_window('../data/data_retweet_trunc', window_size=64)
+    # gen_data_from_multi_order_book(ticks, n_points_per_record=64)
+    # truncate_data2fix_window('../data/data_retweet_trunc', window_size=64)
+    gen_data_from_bund_future('bund.npz', 64)

@@ -10,7 +10,7 @@ from abc import abstractmethod
 import numpy as np
 
 from aehn.lib import yield2batch_data, get_metrics_callback_from_names
-from aehn.lib import DictScaler, VoidScaler, ZeroMaxScaler, SingletonStandScaler
+from aehn.lib import DictScaler, VoidScaler, ZeroMaxScaler, SingletonStandScaler, SingletonZeroMaxScaler
 
 
 class AbstractDataProvider(object):
@@ -158,13 +158,17 @@ class DataProvider(AbstractDataProvider):
         # plot marks
         mark_seqs = data.get('marks')
         if mark_seqs is not None:
+
             import matplotlib.pyplot as plt
             if isinstance(mark_seqs, list):
                 marks = sum(mark_seqs, [])
             else:
                 marks = np.concatenate(mark_seqs)
-            plt.figure()
-            plt.hist(marks, bins=100, range=(0, 2000))
-            plt.show()
+            statistics['mean_marks'] = np.mean(marks)
+            marks_rmse = np.sqrt(np.mean(np.subtract(marks, np.mean(marks)) ** 2))
+            print(marks_rmse)
+            # plt.figure()
+            # plt.hist(marks, bins=100, range=(0, 2000))
+            # plt.show()
 
         return statistics

@@ -36,6 +36,8 @@ class AEHN_mark(BaseModel):
 
         # density = sess.run([self.density], feed_dict=fd)
         # print(density)
+        # means, stds = sess.run([self.means, self.stds], feed_dict=fd)
+        # print(means, stds)
 
         # shape -> [batch_size, max_len - 1]
         preds = {
@@ -87,9 +89,8 @@ class AEHN_mark(BaseModel):
             # shape -> [batch_size, max_len, hidden_dim]
             type_seq_emb = self.embedding_layer(self.types_seq)
             mark_emb = layers.Dense(self.hidden_dim, activation=tf.nn.relu, name='mark_emb_layer')(self.marks_seq)
-
             emb = type_seq_emb + mark_emb
-
+            # emb = tf.concat([type_seq_emb, self.marks_seq], axis=-1)
             # Flow layer
             flow_output = self.flow_layer(emb)
 
@@ -110,14 +111,14 @@ class AEHN_mark(BaseModel):
                 pred_type_logits, pred_time = self.loglikelihood_inference(lambdas_pred_samples, dtimes_pred_samples)
                 self.loss = self.shuffle_loglikelihood_loss(lambdas, lambdas_loss_samples, dtimes_loss_samples)
             else:
-                pred_type_logits, pred_time = self.hybrid_inference(lambdas)
+                pred_type_logits, pred_time = self.hybrid_inference(latent_lambdas)
                 self.loss = self.shuffle_hybrid_loss(pred_type_logits, pred_time)
 
             # marks
             marks_pred = self.mark_inference(latent_lambdas)
             marks_loss = self.mark_loss(marks_pred, self.marks_seq)
 
-            self.loss += marks_loss
+            self.loss = marks_loss
 
             # 4. train step
             self.opt = tf.train.AdamOptimizer(self.learning_rate)
@@ -131,25 +132,21 @@ class AEHN_mark(BaseModel):
             self.pred_marks = marks_pred
 
     def mark_inference(self, latent_lambdas):
-        n_gaussian = 5
+        n_gaussian = 3
         mark_dim = 1
         with tf.variable_scope('mark_inference'):
             mean_w = get_variable_weights('mark_mean_w', [self.hidden_dim, mark_dim, n_gaussian])
             var_w = get_variable_weights('mark_var_w', [self.hidden_dim, mark_dim, n_gaussian])
             weights = get_variable_bias('weights', [mark_dim, n_gaussian])
-            # mean_layer = layers.Dense(n_gaussian * mark_dim, activation=tf.nn.relu, name='mark_mean_layer')
-            # var_layer = layers.Dense(n_gaussian * mark_dim, activation=tf.nn.relu, name='mark_var_layer')
 
             # shape -> [..., mark_dim, n_gaussian]
             sample_shape = [1] * len(latent_lambdas.get_shape().as_list()) + [n_gaussian]
             samples = tf.random_normal(sample_shape)
 
             # shape -> [..., mark_dim, n_gaussian]
-            # means = tf.stack(tf.split(mean_layer(lambdas), mark_dim, axis=-1), axis=-1)
-            # vars = tf.stack(tf.split(var_layer(lambdas), mark_dim, axis=-1), axis=-1)
             means = tf.nn.relu(tensordot(latent_lambdas, mean_w))
-            vars = tf.nn.relu(tensordot(latent_lambdas, var_w))
-            mark_pred = means + vars * samples
+            stds = tf.nn.relu(tensordot(latent_lambdas, var_w))
+            mark_pred = means + stds * samples
 
             # shape -> [..., mark_dim, n_gaussian]
             scaled_weight = tf.reshape(tf.nn.softmax(weights, axis=-1), sample_shape)
@@ -157,11 +154,25 @@ class AEHN_mark(BaseModel):
             # shape -> [..., mark_dim]
             mark_pred = tf.reduce_sum(mark_pred * scaled_weight, axis=-1)
 
+            self.means = means[0, -1, 0]
+            self.stds = stds[0, -1, 0]
+            self.weights = tf.nn.softmax(weights, axis=-1)
+
+            self.mean = tf.reduce_mean(means)
+            self.std = tf.reduce_mean(stds)
+
             return mark_pred
+
+    # def mark_inference(self, latent_lambdas):
+    #     mark_dim = 1
+    #     with tf.variable_scope('mark_inference'):
+    #         w = get_variable_weights('w', [self.hidden_dim, mark_dim])
+    #         b = get_variable_weights('b', [mark_dim])
+    #         return tensordot(latent_lambdas, w) + b
 
     def mark_loss(self, mark_pred, mark_label):
         seq_mask = self.seq_mask
-        with tf.variable_scope('shuffle_hybrid_loss'):
+        with tf.variable_scope('marks_loss'):
             # shape -> [batch_size, max_len - 1]
             seq_mask = seq_mask[:, 1:]
 
@@ -171,7 +182,9 @@ class AEHN_mark(BaseModel):
             mark_diff = tf.boolean_mask((mark_pred - mark_label) ** 2, seq_mask)
             mark_mse = tf.reduce_mean(mark_diff)
 
-            return mark_mse
+            mark_loss = mark_mse
+            # mark_loss = mark_mse + 0.1 * (self.mean - self.std)
+            return mark_loss
 
     # ---------------------- copy from AEHN --------------------------
     def embedding_layer(self, x_input):
