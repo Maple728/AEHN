@@ -12,6 +12,33 @@ def fuse_node_times(e):
     return concat_times[sorting_index], type_arr
 
 
+def multi_hawkes_simulate(adjacency, decays, baseline, end_time, n_simulations):
+    from tick import hawkes
+    timestamps_seqs = []
+    intensities_seqs = []
+    for i in range(n_simulations):
+        hawkes_kernel = hawkes.SimuHawkesExpKernels(adjacency=adjacency,
+                                                    decays=decays,
+                                                    baseline=baseline,
+                                                    end_time=end_time)
+        hawkes_kernel.track_intensity(1.0)
+        hawkes_kernel.simulate()
+
+        intensities = np.sum(np.stack(hawkes_kernel.tracked_intensity, axis=-1), axis=-1, keepdims=False)
+
+        timestamps_seqs.append(hawkes_kernel.timestamps)
+        intensities_seqs.append(intensities)
+
+    timestamps = [fuse_node_times(e) for e in timestamps_seqs]
+    event_timestamps, event_types = list(zip(*timestamps))
+
+    res = dict()
+    res['timestamps'] = event_timestamps
+    res['types'] = event_types
+
+    return res, intensities_seqs
+
+
 def make_2d_hawkes():
     from tick import hawkes
     adj_2d = np.array([[0.1, 0.1],
@@ -51,28 +78,14 @@ def make_2d_hawkes():
 
 
 def make_1d_hawkes():
-    from tick import hawkes
     tmax = 140
-    hawkes_kernel = hawkes.SimuHawkesExpKernels(adjacency=np.array([[0.5]]),
-                                                decays=1.6,
-                                                baseline=np.array([0.5]),
-                                                end_time=tmax)
+    res, intensities = multi_hawkes_simulate(adjacency=np.array([[0.5]]),
+                                             decays=1.6,
+                                             baseline=np.array([0.5]),
+                                             end_time=tmax,
+                                             n_simulations=500)
 
-    multi_hawkes = hawkes.SimuHawkesMulti(hawkes_kernel,
-                                          n_simulations=500,
-                                          n_threads=4)
-
-    multi_hawkes.simulate()
-
-    timestamps = [fuse_node_times(e) for e in multi_hawkes.timestamps]
-
-    event_timestamps, event_types = list(zip(*timestamps))
-
-    res = dict()
-    res['timestamps'] = event_timestamps
-    res['types'] = event_types
-
-    return res
+    return res, intensities
 
 
 def make_3d_hawkes():
@@ -91,9 +104,9 @@ def make_3d_hawkes():
                                             end_time=tmax,
                                             verbose=False)
 
-    hawkes_3d.reset()
+    # hawkes_3d.reset()
     hawkes_3d.track_intensity(0.1)
-    # hawkes_2d.simulate()
+    hawkes_3d.simulate()
 
     multi_3d = hawkes.SimuHawkesMulti(hawkes_3d,
                                       n_simulations=500,
@@ -307,6 +320,9 @@ def make_syn_dataset(dim=2):
     else:
         data = make_20d_hawkes()
 
+    ds, intensities = data
+    data = ds
+
     n_records = len(data['types'])
     train_idx = int(0.6 * n_records)
     valid_idx = int(0.8 * n_records)
@@ -336,6 +352,10 @@ def make_syn_dataset(dim=2):
     with open('test' + '.pkl', 'wb') as file:
         pickle.dump(test_data, file)
 
+    with open('intensities' + '.pkl', 'wb') as file:
+        pickle.dump(intensities, file)
+
 
 if __name__ == '__main__':
-    make_syn_dataset(dim=10)
+    make_syn_dataset(dim=1)
+    # make_syn_dataset(dim=10)

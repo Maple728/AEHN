@@ -4,37 +4,33 @@
 ## Results
 
 ### Retweet
-| Model | method | type_acc | time_rmse |
-| :----:| :-----: | :------: | :-------: |
-|  NHP | 350 epoch  | 58.97%   | 326.64   |
-|  RMTPP | window 50  | 54.14%   | 288.75 |
-| AEHN_simple |	nll|  60.15% | 255.75 |
+| Model | type_acc | time_rmse |
+| :----:| :------: | :-------: |
+|  RMTPP | 54.14%   | 288.73 |
+|  NHP | 54.97%   | 276.64   |
+|  jump | 54.08%   | 306.32 |
+| AEHN | 60.21% | 255.75 |
 
 
 ### Stack Overflow (so)
-| Model | method | type_acc | time_rmse |
-| :----:| :-----: | :------: | :-------: |
-|  NHP | 500 epoch  | 45.50%   | 0.71   |
-|  RMTPP | window 50  | 45.18%   | 0.73   |
-| AEHN_simple |   hybrid  | 45.85%   |   0.64    |
-
-### Orderbook Trade 
-| Model | method | type_acc | time_rmse | comment|
-| :----:| :-----: | :------: | :-------: | :-------: |
-|  RMTPP | xx  | xx%   | xx   | |
-|  RMTPP | xx  | xx%   | xx   | |
-| AEHN_simple |   nll  | 52.68%   |   0.31   | VoidScaler|
+| Model | type_acc | time_rmse |
+| :----:|  :------: | :-------: |
+|  RMTPP |  45.18%   | 0.73   |
+|  NHP | 45.50%   | 0.71   |
+|  jump | 45.55%   | 0.82 |
+| AEHN |  45.55%   | 0.66  |
 
 ### Bund Future 
-| Model | method | type_acc | time_rmse | comment|
-| :----:| :-----: | :------: | :-------: | :-------: |
-|  RMTPP | xx  | xx%   | xx   | |
-|  RMTPP | xx  | xx%   | xx   | |
-| AEHN_simple |   nll  | 63.83%   |   5.66   | VoidScaler|
+| Model | type_acc | time_rmse |
+| :----:|:------: | :-------: |
+|  RMTPP | 63.46%   | 32.32   |
+|  NHP | xx%   | xx  |
+|  jump | 60.24%   | 40.66 |
+| AEHN | 63.83%   |   5.66   |
 
 
 ## Loglikelihood-per-event
-On simullar datasets:
+On synthetic datasets:
 
 | Model | Poisson | Hawkes-Exp | Hawkes-PL | Self-correlation |
 | :--------: | :----------: | :--------: | :----------: | :--------: |
