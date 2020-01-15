@@ -7,6 +7,7 @@
 | Model | method | type_acc | time_rmse |
 | :----:| :-----: | :------: | :-------: |
 |  NHP | 350 epoch  | 58.97%   | 326.64   |
+|  NHP | 350 epoch/pred loss no rmse  | 58.97%   | 326.64   |
 |  RMTPP | window 50  | 54.14%   | 288.75 |
 | AEHN_simple |	nll|  60.15% | 255.75 |
 
@@ -30,6 +31,7 @@
 | :----:| :-----: | :------: | :-------: | :-------: |
 |  RMTPP | xx  | xx%   | xx   | |
 |  RMTPP | xx  | xx%   | xx   | |
+|  NHP | nll train + x-entropy pred  | 59.69%   | 5.482   | |
 | AEHN_simple |   nll  | 63.83%   |   5.66   | VoidScaler|
 
 
