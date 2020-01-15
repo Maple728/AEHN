@@ -10,6 +10,10 @@
 |  NHP | 350 epoch/pred loss no rmse  | 58.97%   | 326.64   |
 |  RMTPP | window 50  | 54.14%   | 288.75 |
 | AEHN_simple |	nll|  60.15% | 255.75 |
+|  RMTPP |xm |54.14%   | 288.73 |
+|  NHP |xm |54.97%   | 276.64   |
+|  jump |xm |54.08%   | 306.32 |
+| AEHN |xm |60.21% | 255.75 |
 
 
 ### Stack Overflow (so)
@@ -18,6 +22,12 @@
 |  NHP | 500 epoch  | 45.50%   | 0.71   |
 |  RMTPP | window 50  | 45.18%   | 0.73   |
 | AEHN_simple |   hybrid  | 45.85%   |   0.64    |
+|  RMTPP |xm | 45.18%   | 0.73   |
+|  NHP |xm |45.50%   | 0.71   |
+|  jump |xm |45.55%   | 0.82 |
+| AEHN | xm |45.55%   | 0.66  |
+
+
 
 ### Orderbook Trade 
 | Model | method | type_acc | time_rmse | comment|
@@ -33,10 +43,16 @@
 |  RMTPP | xx  | xx%   | xx   | |
 |  NHP | nll train + x-entropy pred  | 59.69%   | 5.482   | |
 | AEHN_simple |   nll  | 63.83%   |   5.66   | VoidScaler|
+|  RMTPP |xm |63.46%   | 32.32   |
+|  NHP |xm |xx%   | xx  |
+|  jump |xm |60.24%   | 40.66 |
+| AEHN |xm |63.83%   |   5.66   |
+
+
 
 
 ## Loglikelihood-per-event
-On simullar datasets:
+On synthetic datasets:
 
 | Model | Poisson | Hawkes-Exp | Hawkes-PL | Self-correlation |
 | :--------: | :----------: | :--------: | :----------: | :--------: |
