@@ -182,7 +182,7 @@ class AEHN_mark_2(BaseModel):
 
             mark_loglike = tf.reduce_sum(tf.boolean_mask(loglikehood, seq_mask))
 
-            return - loglikehood
+            return - mark_loglike
 
     # ---------------------- copy from AEHN --------------------------
     def embedding_layer(self, x_input):
