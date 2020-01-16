@@ -8,13 +8,14 @@
 """
 import tensorflow as tf
 from tensorflow.keras import layers
+import numpy as np
 
 from aehn.models import BaseModel
 from aehn.lib.tf_utils import get_variable_weights, get_variable_bias, tensordot
 from aehn.lib import tensordot, swap_axes, create_tensor, Attention
 
 
-class AEHN_mark(BaseModel):
+class AEHN_mark_2(BaseModel):
     """
     AEHN with marks.
     """
@@ -31,7 +32,12 @@ class AEHN_mark(BaseModel):
             self.learning_rate: lr
         }
 
-        _, loss, pred_types, pred_time = sess.run([self.train_op, self.loss, self.pred_types, self.pred_time],
+        _, loss, pred_types, pred_time, std, weights = sess.run([self.train_op,
+                                                   self.loss,
+                                                   self.pred_types,
+                                                   self.pred_time,
+                                                   self.stds,
+                                                        self.weights],
                                                   feed_dict=fd)
 
         # density = sess.run([self.density], feed_dict=fd)
@@ -132,33 +138,37 @@ class AEHN_mark(BaseModel):
             self.pred_marks = marks_pred
 
     def mark_inference(self, latent_lambdas):
-        n_gaussian = 3
+        self.n_gaussian = 3
         mark_dim = 1
         with tf.variable_scope('mark_inference'):
-            mean_w = get_variable_weights('mark_mean_w', [mark_dim, n_gaussian])
-            var_w = get_variable_weights('mark_var_w', [mark_dim, n_gaussian])
-            weights = get_variable_bias('weights', [mark_dim, n_gaussian])
+            layer_mean = layers.Dense(self.n_gaussian, activation=tf.nn.relu)
+            layer_std = layers.Dense(self.n_gaussian, activation=tf.nn.relu)
+            layer_weight = layers.Dense(self.n_gaussian, activation=tf.nn.relu)
 
-            # shape -> [mark_dim, n_gaussian]
-            means = tf.nn.relu(tensordot(latent_lambdas, mean_w))
-            stds = tf.nn.relu(tensordot(latent_lambdas, var_w))
+            # (batch_size, max_len, mark_dim, n_gaussian)
+            self.means = tf.tile(layer_mean(latent_lambdas)[:, :, None, :], [1, 1, mark_dim, 1])
 
-            # shape -> [mark_dim, n_gaussian]
-            scaled_weight = tf.nn.softmax(weights, axis=-1)
+            bound = [0.5, 100]
+            self.stds = tf.tile(layer_std(latent_lambdas)[:, :, None, :], [1, 1, mark_dim, 1])
+            self.stds = tf.clip_by_value(self.stds, bound[0], bound[1])
 
-            # shape -> [mark_dim]
-            mark_pred = tf.reduce_sum(means * scaled_weight, axis=-1)
+            # (batch_size, max_len, mark_dim, n_gaussian)
+            weights = tf.tile(layer_weight(latent_lambdas)[:, :, None, :], [1, 1, mark_dim, 1])
 
-            self.weights = scaled_weight
+            # (batch_size, max_len, mark_dim, n_gaussian)
+            self.weights = tf.nn.softmax(weights, axis=-1)
+
+            # (batch_size, max_len)
+            mark_pred = tf.reduce_sum(self.means * self.weights, axis=-1)
 
             return mark_pred
 
-    # def mark_inference(self, latent_lambdas):
-    #     mark_dim = 1
-    #     with tf.variable_scope('mark_inference'):
-    #         w = get_variable_weights('w', [self.hidden_dim, mark_dim])
-    #         b = get_variable_weights('b', [mark_dim])
-    #         return tensordot(latent_lambdas, w) + b
+    @staticmethod
+    def log_normal_pdf(weights, gaussian_mean, gaussian_std, x):
+        """ log density of mixed gaussian distribution """
+        log_const = tf.log(1 / gaussian_std * np.sqrt(2 * np.pi))
+        log_exp = - (x - gaussian_mean) ** 2 / (2 * gaussian_std ** 2)
+        return tf.reduce_sum(weights * (log_const + log_exp), axis=[-1, -2])
 
     def mark_loss(self, mark_pred, mark_label):
         seq_mask = self.seq_mask
@@ -166,15 +176,13 @@ class AEHN_mark(BaseModel):
             # shape -> [batch_size, max_len - 1]
             seq_mask = seq_mask[:, 1:]
 
-            mark_pred = mark_pred[:, :-1]
-            mark_label = mark_label[:, 1:]
+            # (batch_size, max_len, mark_dim)
+            mark_pred_ = tf.tile(mark_pred[:, :, :, None], [1, 1, 1, self.n_gaussian])
+            loglikehood = self.log_normal_pdf(self.weights, self.means, self.stds, mark_pred_)
 
-            mark_diff = tf.boolean_mask((mark_pred - mark_label) ** 2, seq_mask)
-            mark_mse = tf.reduce_mean(mark_diff)
+            mark_loglike = tf.reduce_sum(tf.boolean_mask(loglikehood, seq_mask))
 
-            mark_loss = mark_mse
-            # mark_loss = mark_mse + 0.1 * (self.mean - self.std)
-            return mark_loss
+            return - loglikehood
 
     # ---------------------- copy from AEHN --------------------------
     def embedding_layer(self, x_input):
