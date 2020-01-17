@@ -66,6 +66,18 @@ class AEHN(BaseModel):
         }
         return loss, preds, labels
 
+    def visualize_lambda(self, sess, batch_data):
+        type_seqs = batch_data['types']
+        dtime_seqs = batch_data['dtimes']
+        fd = {
+            self.types_seq: type_seqs,
+            self.dtimes_seq: dtime_seqs
+        }
+        lambdas, dtimes = sess.run([self.sampled_lambdas, self.sampled_dtimes],
+                                   feed_dict=fd)
+
+        return lambdas, dtimes
+
     def __init__(self, model_config):
         # get hyperparameters from config
         super(AEHN, self).__init__(model_config)
@@ -83,6 +95,9 @@ class AEHN(BaseModel):
             lambdas, \
             lambdas_loss_samples, dtimes_loss_samples, \
             lambdas_pred_samples, dtimes_pred_samples = self.intensity_layer(flow_output)
+
+            self.sampled_dtimes = dtimes_loss_samples
+            self.sampled_lambdas = lambdas_loss_samples
 
             # 3. Inference layer and loss function
             # [batch_size, max_len, process_dim], [batch_size, max_len]

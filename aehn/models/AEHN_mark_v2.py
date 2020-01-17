@@ -40,7 +40,20 @@ class AEHN_mark_2(BaseModel):
                                                         self.weights],
                                                   feed_dict=fd)
 
-        # density = sess.run([self.density], feed_dict=fd)
+        # if loss < 0.0:
+        #     means, stds, weights = sess.run([self.means, self.stds, self.weights], feed_dict=fd)
+        #     marks = mark_seqs[:, :, :, None]
+        #     l = 1 / (np.sqrt(2 * np.pi) * stds)
+        #     r = np.exp(- ((marks - means) ** 2 / (2 * stds ** 2)))
+        #     pdf = l * r
+        #
+        #     log_l = - np.log(np.sqrt(2 * np.pi) * stds)
+        #     log_r = - (marks - means) / 2 * stds ** 2
+        #     log_pdf = log_l + log_r
+        #
+        #     print(pdf.min(), pdf.max(), log_pdf.min(), log_pdf.max())
+        #     print()
+
         # print(density)
         # means, stds = sess.run([self.means, self.stds], feed_dict=fd)
         # print(means, stds)
@@ -141,32 +154,30 @@ class AEHN_mark_2(BaseModel):
         self.n_gaussian = 3
         mark_dim = 1
         with tf.variable_scope('mark_inference'):
-            layer_mean = layers.Dense(self.n_gaussian, activation=tf.nn.relu)
-            layer_std = layers.Dense(self.n_gaussian, activation=tf.nn.relu)
-            layer_weight = layers.Dense(self.n_gaussian, activation=tf.nn.relu)
+            mean_w = get_variable_weights('mark_mean_w', [self.hidden_dim, mark_dim, self.n_gaussian])
+            var_w = get_variable_weights('mark_var_w', [self.hidden_dim, mark_dim, self.n_gaussian])
+            weights = get_variable_weights('weights', [self.hidden_dim, mark_dim, self.n_gaussian])
 
-            # (batch_size, max_len, mark_dim, n_gaussian)
-            self.means = tf.tile(layer_mean(latent_lambdas)[:, :, None, :], [1, 1, mark_dim, 1])
+            # shape -> [batch_size, max_len, mark_dim, n_gaussian]
+            means = tf.nn.relu(tensordot(latent_lambdas, mean_w))
+            stds = tf.nn.softplus(tensordot(latent_lambdas, var_w))
+            scaled_weights = tf.nn.softmax(tensordot(latent_lambdas, weights), axis=-1)
 
-            bound = [0.5, 100]
-            self.stds = tf.tile(layer_std(latent_lambdas)[:, :, None, :], [1, 1, mark_dim, 1])
-            self.stds = tf.clip_by_value(self.stds, bound[0], bound[1])
+            marks_pred = tf.reduce_sum(means * scaled_weights, axis=-1, keepdims=False)
 
-            # (batch_size, max_len, mark_dim, n_gaussian)
-            weights = tf.tile(layer_weight(latent_lambdas)[:, :, None, :], [1, 1, mark_dim, 1])
+            # assign values
+            self.means = means
+            # bound = [0.1, 2.0]
+            # self.stds = tf.clip_by_value(stds, bound[0], bound[1])
+            self.stds = stds
+            self.weights = scaled_weights
 
-            # (batch_size, max_len, mark_dim, n_gaussian)
-            self.weights = tf.nn.softmax(weights, axis=-1)
-
-            # (batch_size, max_len)
-            mark_pred = tf.reduce_sum(self.means * self.weights, axis=-1)
-
-            return mark_pred
+            return marks_pred
 
     @staticmethod
     def log_normal_pdf(weights, gaussian_mean, gaussian_std, x):
         """ log density of mixed gaussian distribution """
-        log_const = tf.log(1 / gaussian_std * np.sqrt(2 * np.pi))
+        log_const = - tf.log(gaussian_std * tf.sqrt(2 * np.pi))
         log_exp = - (x - gaussian_mean) ** 2 / (2 * gaussian_std ** 2)
         return tf.reduce_sum(weights * (log_const + log_exp), axis=[-1, -2])
 
@@ -177,10 +188,11 @@ class AEHN_mark_2(BaseModel):
             seq_mask = seq_mask[:, 1:]
 
             # (batch_size, max_len, mark_dim)
-            mark_pred_ = tf.tile(mark_pred[:, :, :, None], [1, 1, 1, self.n_gaussian])
+            mark_pred_ = tf.tile(mark_label[:, :, :, None], [1, 1, 1, self.n_gaussian])
             loglikehood = self.log_normal_pdf(self.weights, self.means, self.stds, mark_pred_)
 
-            mark_loglike = tf.reduce_sum(tf.boolean_mask(loglikehood, seq_mask))
+            reg = - tf.reduce_mean(self.stds)
+            mark_loglike = tf.reduce_mean(tf.boolean_mask(loglikehood, seq_mask)) + reg
 
             return - mark_loglike
 

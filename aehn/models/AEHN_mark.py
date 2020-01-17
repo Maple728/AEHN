@@ -118,7 +118,7 @@ class AEHN_mark(BaseModel):
             marks_pred = self.mark_inference(latent_lambdas)
             marks_loss = self.mark_loss(marks_pred, self.marks_seq)
 
-            self.loss = marks_loss
+            self.loss = self.loss + marks_loss
 
             # 4. train step
             self.opt = tf.train.AdamOptimizer(self.learning_rate)
@@ -182,8 +182,8 @@ class AEHN_mark(BaseModel):
             mark_diff = tf.boolean_mask((mark_pred - mark_label) ** 2, seq_mask)
             mark_mse = tf.reduce_mean(mark_diff)
 
-            mark_loss = mark_mse
-            # mark_loss = mark_mse + 0.1 * (self.mean - self.std)
+            # mark_loss = mark_mse
+            mark_loss = mark_mse + 0.1 * (self.mean - self.std)
             return mark_loss
 
     # ---------------------- copy from AEHN --------------------------
