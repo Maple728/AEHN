@@ -11,6 +11,7 @@ from aehn.models.base_model import SAHPAttention
 from aehn.models.AEHN import AEHN
 from aehn.models.AEHN_mark import AEHN_mark
 from aehn.models.AEHN_mark_v2 import AEHN_mark_2
+from aehn.models.AEHN_origin import AEHN_origin
 from aehn.models.SAHP import SAHP
 
 __all__ = ['BaseModel',
@@ -18,4 +19,5 @@ __all__ = ['BaseModel',
            'AEHN',
            'AEHN_mark',
            'AEHN_mark_2',
+           'AEHN_origin',
            'SAHP']
